@@ -8,6 +8,12 @@ export const VT_SEARCH = 'https://virustotal.com/gui/search/%s';
 export const IPDB_SEARCH = 'https://abuseipdb.com/check/%s';
 export const GOOGLE_SEARCH = 'https://google.com/search?q=%s';
 
+export interface ParsedIndicators {
+    title: string;
+    items: string[];
+    sites: searchSite[] | undefined;
+}
+
 export interface searchSite {
     name: string
     shortName: string
