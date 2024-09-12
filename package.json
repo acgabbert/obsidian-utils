@@ -1,7 +1,7 @@
 {
   "name": "obsidian-cyber-utils",
   "version": "0.0.1",
-  "description": "Utility functions for developing Obsidian plugins.",
+  "description": "Utility functions for developing Obsidian plugins, focused on cyber security note-taking.",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
