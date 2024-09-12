@@ -1,3 +1,4 @@
+export * from './cyberPlugin';
 export * from './domUtils';
 export * from './editorUtils';
 export * from './modal';
