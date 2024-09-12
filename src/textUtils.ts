@@ -34,6 +34,10 @@ export const FILE_REGEX = /(?:^|\s|")((\w:\\|[\\/])[^\\/]+[\\/]([^\\/\n"|]+[\\/]
 export const TLD_URL = 'https://data.iana.org/TLD/tlds-alpha-by-domain.txt';
 
 async function getValidTld(): Promise<string[] | null> {
+    /**
+     * Get a list of valid top-level domains from IANA.
+     * @returns a promise with the list of valid strings, or null if failed.
+     */
     const tldParams = {url: 'https://data.iana.org/TLD/tlds-alpha-by-domain.txt', throw: true} as RequestUrlParam;
     try {
         const data = await request(tldParams);
@@ -326,7 +330,13 @@ function convertTime(timeString: string): number {
     return Date.parse(timeString);
 }
 
-function validateDomains(domains: string[], validTld: string[]) {
+function validateDomains(domains: string[], validTld: string[]): string[] {
+    /**
+     * Validate a list of domains against a list of valid top-level domains (TLD)
+     * @param domains a list of domains to validate
+     * @param validTld a list of valid TLDs
+     * @returns domains with valid TLDs
+     */
     let index = domains.length - 1;
     while (index >= 0) {
         const domain = domains[index];
