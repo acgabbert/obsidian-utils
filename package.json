@@ -1,0 +1,36 @@
+{
+  "name": "@acgabbert/obsidian-utils",
+  "version": "0.1.0",
+  "description": "Utility functions for developing Obsidian plugins.",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "files": [
+      "dist"
+   ],
+  "scripts": {
+    "build": "tsup",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/acgabbert/obsidian-utils.git"
+  },
+  "keywords": [
+    "obsidian",
+    "plugin",
+    "cyber"
+  ],
+  "author": "acgabbert",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/acgabbert/obsidian-utils/issues"
+  },
+  "homepage": "https://github.com/acgabbert/obsidian-utils#readme",
+  "devDependencies": {
+    "obsidian": "^1.6.6",
+    "ts-node": "^10.9.2",
+    "tsup": "^8.2.4",
+    "typescript": "^5.6.2"
+  }
+}
