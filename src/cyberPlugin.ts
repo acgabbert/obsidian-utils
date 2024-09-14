@@ -1,8 +1,6 @@
 import { Plugin } from "obsidian";
 import { searchSite } from "./sidebar";
 
-
-
 interface CyberPluginSettings {
 	validTld: string[];
 	searchSites: searchSite[];
