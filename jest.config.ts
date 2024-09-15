@@ -5,10 +5,7 @@ const config: Config = {
   preset: "ts-jest",
   testEnvironment: "node",
   testRegex: '/tests/.*\\.(test|spec)?\\.(ts|tsx)$',
-  moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
-  moduleNameMapper: {
-     "^obsidian$": "<rootDir>/__mocks__/obsidianMock.js"
-  }
+  moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node']
 };
 
 export default config;
