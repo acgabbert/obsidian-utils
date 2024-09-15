@@ -1,4 +1,4 @@
-import { defangDomain, defangEmail, defangIp, friendlyDatetime } from "../src";
+import { addUniqueValuesToArray, defangDomain, defangEmail, defangIp, extractMacros, friendlyDatetime } from "../src";
 
 // Defang functions
 test('Defangs IP address', () => {
@@ -8,10 +8,12 @@ test('Defangs IP address', () => {
     const ip2 = defangIp('8.8.8[.]8');
     expect(ip2).toBe('8.8.8[.]8');
 });
+
 test('Defangs email address', () => {
     const email1 = defangEmail('aaron@gabbert.me');
     expect(email1).toBe('aaron[@]gabbert[.]me');
 });
+
 test('Defangs domain', () => {
     const domain1 = defangDomain('google.com');
     expect(domain1).toBe('google[.]com');
@@ -21,13 +23,21 @@ test('Defangs domain', () => {
     const domain3 = defangDomain(domain2);
     expect(domain3).toBe('google.co[.]uk');
 });
+
 test('Defangs URL', () => {
     const url1 = defangDomain('https://google.com');
     expect(url1).toBe('hxxps[://]google[.]com');
+});
+
+// Text extraction functions
+test('Extracts macros', () => {
+    const macros1 = extractMacros(`{{user}} macro
+        {{host}} another macro`);
+    expect(macros1.sort()).toEqual(['{{user}}', '{{host}}'].sort())
 });
 
 // Other transformations
 test('Friendly prints date/time (e.g. "[DATE] at [TIME]")', () => {
     const datetime = friendlyDatetime('2024-09-09 09:09:09 UTC');
     expect(datetime).toBe('2024-09-09 at 09:09:09 UTC');
-})
+});
