@@ -1,26 +1,26 @@
 import { App, Editor, type EditorPosition, MarkdownView, TFile } from "obsidian";
 export { appendToEnd, transformSelectedText };
 
+/**
+ * Transforms the text selected by the user.
+ * @param editor
+ * @param func the function to perform on the text
+ * @returns the transformed text
+ */
 function transformSelectedText(editor: Editor, func: Function) {
-    /**
-     * Transforms the text selected by the user.
-     * @param editor
-     * @param func the function to perform on the text
-     * @returns the transformed text
-     */
     const selection = editor.getSelection();
     const transformed = func(selection);
     editor.replaceSelection(transformed);
     return transformed;
 }
 
+/**
+ * Append content to the end of a file, and scroll to view it.
+ * @param app the current Obsidian App instance
+ * @param file the current note
+ * @param text the text to be appended
+ */
 function appendToEnd(app: App, file: TFile, text: string) {
-    /**
-     * Append content to the end of a file, and scroll to view it.
-     * @param app the current Obsidian App instance
-     * @param file the current note
-     * @param text the text to be appended
-     */
     if (!app) return;
     const vault = app.vault;
     if (!vault || !file) return;

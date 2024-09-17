@@ -131,12 +131,12 @@ function noteReplace(vault: Vault, note: TFile, regex: RegExp, content: string):
     });
 }
 
+/**
+ * Opens the note in a new tab
+ * @param app the current App class instance
+ * @param note the file you would like to open
+ */
 function openNote(app: App, note: TFile) {
-    /**
-     * Opens the note in a new tab
-     * @param app the current App class instance
-     * @param note the file you would like to open
-     */
     if (!note || !app) return;
     const view = app.workspace.getLeaf();
     view.openFile(note);
