@@ -1,6 +1,6 @@
-import { addUniqueValuesToArray, Code, constructMacroRegex, defangDomain, defangEmail, defangIp, extractMacros, friendlyDatetime, parseCodeBlocks, removeArrayDuplicates, replaceMacros, validateDomain, validateDomains } from "../src";
+import { addUniqueValuesToArray, Code, constructMacroRegex, defangDomain, defangEmail, defangIp, DOMAIN_REGEX, extractMacros, findFirstByRegex, friendlyDatetime, IP_REGEX, lowerMd5, lowerSha256, parseCodeBlocks, refangIoc, removeArrayDuplicates, replaceMacros, validateDomain, validateDomains } from "../src";
 
-// Defang functions
+// Defang/Re-fang functions
 test('Defangs IP address', () => {
     const ip1 = defangIp('8.8.8.8');
     expect(ip1).toBe('8.8.8[.]8');
@@ -27,6 +27,15 @@ test('Defangs domain', () => {
 test('Defangs URL', () => {
     const url1 = defangDomain('https://google.com');
     expect(url1).toBe('hxxps[://]google[.]com');
+});
+
+test('Refangs IOCs', () => {
+    const domain1 = refangIoc('google[.]com');
+    expect(domain1).toBe('google.com');
+    const url1 = refangIoc('hxxps[://]www.google[.]com/xyz');
+    expect(url1).toBe('https://www.google.com/xyz');
+    const ip1 = refangIoc('8.8.8[.]8');
+    expect(ip1).toBe('8.8.8.8');
 });
 
 // Text extraction functions
@@ -65,6 +74,15 @@ test('Tests construction of macro regex', () => {
     expect(result2).toEqual(/(user|account)(?:\s*[:=]\s*|\s+)(((?:[^}\s]*\w[^}\s]*)+))/gi);
 });
 
+// Regex tests
+test('Tests finding regex matches', () => {
+    const testString = `Two IP addresses:
+        8.8.8.8
+        9.9.9.9`
+    expect(findFirstByRegex(testString, IP_REGEX)).toBe('8.8.8.8');
+    expect(findFirstByRegex(testString, DOMAIN_REGEX)).toThrow("No matches from the provided regex.");
+})
+
 // Other transformations
 test('Friendly prints date/time (e.g. "[DATE] at [TIME]")', () => {
     const datetime = friendlyDatetime('2024-09-09 09:09:09 UTC');
@@ -92,3 +110,12 @@ test('Tests removal of array duplicates', () => {
     const result1 = removeArrayDuplicates(arrWithDupes);
     expect(result1).toEqual(['yes', 'no', 'asdf']);
 });
+
+test('Tests other transformation of various IOCs', () => {
+    const sha256upper = '1DB2D73D2F341ED85551FC341F88E6AB33BEE543C706C9B53469739E3A83FA50';
+    const md5upper = 'D01726DBB7CA105A949C85E30618A390';
+    const notAHash = 'D01726DBB7CA105A949C85E30618A39Z';
+    expect(lowerMd5(md5upper)).toBe('d01726dbb7ca105a949c85e30618a390');
+    expect(lowerSha256(sha256upper)).toBe('1db2d73d2f341ed85551fc341f88e6ab33bee543c706c9b53469739e3a83fa50');
+    expect(lowerMd5(lowerSha256(notAHash))).toBe(notAHash);
+})

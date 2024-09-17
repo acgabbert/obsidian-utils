@@ -145,21 +145,23 @@ function refangIoc(text: string): string {
 }
 
 /**
- * Converts SHA256 hashes (or any 64 character alphanumeric string) to lowercase
+ * Converts SHA256 hashes (or any 64 character hex string) to lowercase
+ * @param text a string
  * @returns input string with SHA256 hashes converted to lowercase
  */
-function lowerSha256(text: string): string {
-    return text.replace(/(\w{64})/g, function(match) {
+function lowerSha256(hash: string): string {
+    return hash.replace(/([0-9a-fA-F]{64})/g, function(match) {
         return match.toLowerCase();
     });
 }
 
 /**
- * Converts MD5 hashes (or any 32 character alphanumeric string) to lowercase
+ * Converts MD5 hashes (or any 32 character hex string) to lowercase
+ * @param text a string
  * @returns input string with MD5 hashes converted to lowercase
  */
 function lowerMd5(text: string): string {
-    return text.replace(/(\w{32})/g, function(match) {
+    return text.replace(/([0-9a-fA-F]{32})/g, function(match) {
         return match.toLowerCase();
     });
 }
