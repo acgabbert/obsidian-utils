@@ -307,7 +307,6 @@ export const macroValue = "(((?:[^}\\s]*\\w[^}\\s]*)+))";
 function constructMacroRegex(macroRegex: string | RegExp): RegExp {
     if (macroRegex instanceof RegExp) macroRegex = macroRegex.source;
     const retval = new RegExp(macroRegex + macroSeparator + macroValue, "gi");
-    console.log(retval);
     return retval;
 }
 
@@ -350,7 +349,6 @@ function validateDomains(domains: string[], validTld: string[]): string[] {
         const domain = domains[index];
         if (!validateDomain(domain, validTld)) {
             domains.splice(index, 1);
-            console.log(domains.length);
         }
         index -= 1;
     }
