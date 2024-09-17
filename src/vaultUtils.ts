@@ -11,12 +11,12 @@ export {
     removeDotObsidian
 };
 
+/**
+ * Check if a given folder exists
+ * @param rootPath the folder to start searching from
+ * @returns folder name, blank if not exists
+ */
 async function checkFolderExistsRecursive(vault: Vault, folderName: string): Promise<string> {
-    /**
-     * Check if a given folder exists
-     * @param rootPath the folder to start searching from
-     * @returns folder name, blank if not exists
-     */
     async function searchFolder(rootPath: string): Promise<string> {
         const checkVal = rootPath + "/" + folderName;
         const folderExists = await vault.adapter.exists(checkVal, true);
@@ -45,12 +45,13 @@ async function checkFolderExistsRecursive(vault: Vault, folderName: string): Pro
     return await searchFolder("");
 }
 
-function removeDotObsidian(files: Array<string>) {
-    /**
-     * Remove .obsidian config folder, .DS_Store file from a list of file/folder names
-     * @param files an array of file/folder names
-     * @returns the array with unnecessary files removed
-     */
+
+/**
+ * Remove .obsidian config folder, .DS_Store file from a list of file/folder names
+ * @param files an array of file/folder names
+ * @returns the array with unnecessary files removed
+ */
+function removeDotObsidian(files: string[]): string[] {
     const removals = ['.obsidian', '.DS_Store'];
     removals.forEach((value) => {
         const i = files.indexOf(value);
@@ -61,36 +62,36 @@ function removeDotObsidian(files: Array<string>) {
     return files;
 }
 
+/**
+ * Creates a folder if it does not already exist.
+ * @param vault
+ */
 async function createFolderIfNotExists(vault: Vault, folderName: string) {
-    /**
-     * Creates a folder if it does not already exist.
-     * @param vault
-     */
     const folder = await checkFolderExistsRecursive(vault, folderName);
     if (!folder) {
         await vault.createFolder(folderName);
     }
 }
 
+/**
+ * Creates a note within the given vault.
+ * @param vault
+ * @param folderName
+ * @param noteTitle
+ * @returns the newly created note
+ */
 async function createNote(vault: Vault, folderName: string, noteTitle: string): Promise<TFile> {
-    /**
-     * Creates a note within the given vault.
-     * @param vault
-     * @param folderName
-     * @param noteTitle
-     * @returns the note
-     */
     return await vault.create(`${folderName}/${noteTitle}.md`, '');
 }
 
+/**
+ * Get an array of the unresolved backlinks in a note.
+ * @param notePath the note to check
+ * @param app the current App class instance
+ * @param resolved whether or not you want resolved links
+ * @returns an array of strings
+ */
 function getBacklinks(notePath: string, app: App, resolved = false): Array<string> {
-    /**
-     * Get an array of the unresolved backlinks in a note.
-     * @param notePath the note to check
-     * @param app the current App class instance
-     * @param resolved whether or not you want resolved links
-     * @returns an array of strings
-     */
     let backlinks = null;
     if (resolved) {
         backlinks = app.metadataCache.resolvedLinks[notePath];
@@ -104,28 +105,28 @@ function getBacklinks(notePath: string, app: App, resolved = false): Array<strin
     return retval;
 }
 
+/**
+ * Append to the end of a note
+ * @param vault the current vault
+ * @param note the note to append to
+ * @param content the content to append
+ * @returns the modified content
+ */
 function noteAppend(vault: Vault, note: TFile, content: string): Promise<string> {
-    /**
-     * Append to the end of a note
-     * @param vault the current vault
-     * @param note the note to append to
-     * @param content the content to append
-     * @returns the modified content
-     */
     return vault.process(note, (data) => {
         return data + content;
     });
 }
 
+/**
+ * Replace content in a note by regular expression
+ * @param vault the current vault
+ * @param note the note to append to
+ * @param regex the pattern to match for replacement
+ * @param content the content to replace with 
+ * @returns the modified content
+ */
 function noteReplace(vault: Vault, note: TFile, regex: RegExp, content: string): Promise<string> {
-    /**
-     * Replace content in a note by regular expression
-     * @param vault the current vault
-     * @param note the note to append to
-     * @param regex the pattern to match for replacement
-     * @param content the content to replace with 
-     * @returns the modified content
-     */
     return vault.process(note, (data) => {
         return data.replace(regex, content);
     });
