@@ -30,6 +30,7 @@ export {
 // regex for possibly defanged values
 export const IP_REGEX = /((?:25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\[?\.\]?\d{1,3}\[?\.\]?\d{1,3}\[?\.\]?\d{1,3})/gi;
 export const IPv6_REGEX = /((?:::|[0-9a-f]{1,4}::?)(?:[0-9a-f]{1,4}::?){0,6}(?:[0-9a-f]{1,4}|::?))/gi;
+export const LOCAL_IP_REGEX = /^(127\.)|(10\.)|(172\.1[6-9]\.)|(172\.2[0-9]\.)|(172\.3[0-1]\.)|(192\.168\.)/g;
 export const DOMAIN_REGEX = /((?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(\.|\[\.\]))+[a-z][a-z0-9-]{0,61}[a-z](?=\.?)\b)/gi;
 export const HASH_REGEX = /(?:^|[^a-f0-9]+)([a-f0-9]{64}|[a-f0-9]{40}|[a-f0-9]{32})(?:$|[^a-f0-9]+)/gi;
 export const FILE_REGEX = /(?:^|\s|")((\w:\\|[\\/])[^\\/]+[\\/]([^\\/\n"|]+[\\/]?)+(\.\w+)?)/gi;
@@ -358,7 +359,6 @@ function validateDomains(domains: string[], validTld: string[]): string[] {
     return domains;
 }
 
-export const LOCAL_IP_REGEX = /^(127\.)|(10\.)|(172\.1[6-9]\.)|(172\.2[0-9]\.)|(172\.3[0-1]\.)|(192\.168\.)/g;
 /**
  * Checks an IP address is local/private per RFC 1918
  * @param ip an IPv4 address
