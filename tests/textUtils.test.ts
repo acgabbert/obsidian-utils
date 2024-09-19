@@ -1,4 +1,4 @@
-import { addUniqueValuesToArray, Code, constructMacroRegex, defangDomain, defangEmail, defangIp, DOMAIN_REGEX, extractMacros, findFirstByRegex, friendlyDatetime, getValidTld, IP_REGEX, lowerMd5, lowerSha256, parseCodeBlocks, refangIoc, removeArrayDuplicates, replaceMacros, validateDomain, validateDomains } from "../src";
+import { addUniqueValuesToArray, Code, constructMacroRegex, defangDomain, defangEmail, defangIp, DOMAIN_REGEX, extractMacros, findFirstByRegex, friendlyDatetime, getValidTld, IP_REGEX, isLocalIp, lowerMd5, lowerSha256, parseCodeBlocks, refangIoc, removeArrayDuplicates, replaceMacros, validateDomain, validateDomains } from "../src";
 
 // Defang/Re-fang functions
 test('Defangs IP address', () => {
@@ -56,6 +56,22 @@ Get-ChildItem {{file}}
     const expectedResults = [['Test Code', result1]]
     expect(results.sort()).toEqual(expectedResults)
 });
+
+test('Recognizes local IPv4 addresses', () => {
+    const local1 = isLocalIp('10.1.2.3');
+    const local2 = isLocalIp('192.168.1.2');
+    const local3 = isLocalIp('127.0.0.1');
+    const local4 = isLocalIp('172.16.2.3');
+    const local5 = isLocalIp('172.31.2.3');
+    const notLocal1 = isLocalIp('8.8.8.8');
+
+    expect(local1).toBe(true);
+    expect(local2).toBe(true);
+    expect(local3).toBe(true);
+    expect(local4).toBe(true);
+    expect(local5).toBe(true);
+    expect(notLocal1).toBe(false);
+})
 
 // Macro tests
 test('Tests replacement of macros', () => {
