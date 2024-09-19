@@ -12,7 +12,8 @@ export {
     findFirstByRegex,
     friendlyDatetime,
     getValidTld,
-    isLocalIpv4 as isLocalIp,
+    isLocalIpv4,
+    localDateTime,
     lowerSha256,
     lowerMd5,
     parseCodeBlocks,
@@ -28,8 +29,9 @@ export {
 
 // regex for possibly defanged values
 export const IP_REGEX = /((?:25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\[?\.\]?\d{1,3}\[?\.\]?\d{1,3}\[?\.\]?\d{1,3})/gi;
-export const DOMAIN_REGEX = /((?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.|\[\.\]))+[a-zA-Z][a-zA-Z0-9-]{0,61}[a-zA-Z](?=\.?)\b)/gi;
-export const HASH_REGEX = /(?:^|[^a-fA-F0-9]+)([a-fA-F0-9]{64}|[a-fA-F0-9]{40}|[a-fA-F0-9]{32})(?:$|[^a-fA-F0-9]+)/gi;
+export const IPv6_REGEX = /((?:::|[0-9a-f]{1,4}::?)(?:[0-9a-f]{1,4}::?){0,6}(?:[0-9a-f]{1,4}|::?))/gi;
+export const DOMAIN_REGEX = /((?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(\.|\[\.\]))+[a-z][a-z0-9-]{0,61}[a-z](?=\.?)\b)/gi;
+export const HASH_REGEX = /(?:^|[^a-f0-9]+)([a-f0-9]{64}|[a-f0-9]{40}|[a-f0-9]{32})(?:$|[^a-f0-9]+)/gi;
 export const FILE_REGEX = /(?:^|\s|")((\w:\\|[\\/])[^\\/]+[\\/]([^\\/\n"|]+[\\/]?)+(\.\w+)?)/gi;
 
 export const TLD_URL = 'https://data.iana.org/TLD/tlds-alpha-by-domain.txt';
@@ -77,10 +79,10 @@ export interface folderPrefs {
 }
 
 /**
- * Returns a string with the folder structure for the current date
+ * Returns a string array with the folder structure for the current date based on user preferences
  * Format: `YYYY/YYYY-QQ/YYYY-MM/YYYY-MM-DD`
  * 
- * @param quarter - Boolean specifying whether to include quarter (YYYY-QQ) in the folder structure
+ * @param prefs booleans specifying whether to include certain portions in the structure
  * @returns the folder structure for the current date
  */
 function todayFolderStructure(prefs: folderPrefs): Array<string> {
@@ -183,10 +185,10 @@ function friendlyDatetime(text: string): string {
  * @param regex the regular expression to match
  * @returns first match of a regex in the given string
  */
-function findFirstByRegex(text: string, regex: RegExp): string {
+function findFirstByRegex(text: string, regex: RegExp): string | null {
     const result = regex.exec(text);
     if (!result) {
-        throw Error;
+        return null;
     } else {
         return result[1]
     }
@@ -367,4 +369,3 @@ function isLocalIpv4(ip: string): boolean {
     if (localIpTest.exec(ip)) return true;
     else return false;
 }
-
