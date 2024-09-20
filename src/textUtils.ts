@@ -321,7 +321,9 @@ function constructMacroRegex(macroRegex: string | RegExp): RegExp {
  * @returns the boolean representation of the domain's validity
  */
 function validateDomain(domain: string, validTld: string[]): boolean {
-    const tld = domain.split('.').pop()?.toUpperCase();
+    let tld = domain.split('.').pop()?.toUpperCase();
+    if (tld && validTld.includes(tld)) return true;
+    tld = domain.split('[.]').pop()?.toUpperCase();
     if (tld && validTld.includes(tld)) return true;
     return false;
 }

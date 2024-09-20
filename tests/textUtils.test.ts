@@ -125,9 +125,17 @@ test('Validates TLDs', async () => {
     expect(result3).toBe(true);
     expect(result4).toBe(false);
 
-    const domains = ['asdf.com', 'questions.info', 'google.com', 'facebook.org', 'gabbert.me', 'asdf.qwerty'];
-    const result5 = validateDomains(domains, validTld);
-    expect(result5).toEqual(['asdf.com', 'questions.info', 'google.com', 'facebook.org', 'gabbert.me'])
+    const domains1 = ['asdf.com', 'questions.info', 'google.com', 'facebook.org', 'gabbert.me', 'asdf.qwerty'];
+    const result5 = validateDomains(domains1, validTld);
+    expect(result5).toEqual(['asdf.com', 'questions.info', 'google.com', 'facebook.org', 'gabbert.me']);
+
+    // Validate TLDs of defanged domains
+    const result6 = validateDomain('google[.]com', validTld);
+    expect(result6).toBe(true);
+    
+    const domains2 = ['asdf.com', 'questions[.]info', 'google[.]com', 'facebook.org', 'gabbert.me', 'asdf[.]qwerty'];
+    const result7 = validateDomains(domains2, validTld);
+    expect(result7).toEqual(['asdf.com', 'questions[.]info', 'google[.]com', 'facebook.org', 'gabbert.me']);
 });
 
 test('Tests removal of array duplicates', () => {
