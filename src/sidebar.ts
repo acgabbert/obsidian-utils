@@ -1,6 +1,7 @@
 import { ButtonComponent, ItemView, TAbstractFile, TFile, WorkspaceLeaf } from "obsidian";
-import { DOMAIN_REGEX, HASH_REGEX, IP_REGEX, extractMatches, refangIoc, removeArrayDuplicates, validateDomain } from "./textUtils";
+import { extractMatches, refangIoc, removeArrayDuplicates, validateDomain } from "./textUtils";
 import { openDetails, removeElements } from "./domUtils";
+import { DOMAIN_REGEX, HASH_REGEX, IP_REGEX } from "./regex";
 
 export const VIEW_TYPE = "plugin-sidebar";
 
