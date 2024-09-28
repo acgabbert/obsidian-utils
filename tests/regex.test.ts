@@ -1,4 +1,4 @@
-import { findFirstByRegex, IP_REGEX, DOMAIN_REGEX, IPv6_REGEX, isLocalIpv4 } from "../src";
+import { findFirstByRegex, IP_REGEX, DOMAIN_REGEX, IPv6_REGEX, isLocalIpv4, HASH_REGEX, FILE_REGEX } from "../src";
 
 // Regex tests
 test('Tests finding regex matches', () => {
@@ -38,4 +38,17 @@ test('Recognizes local IPv4 addresses', () => {
     expect(local4).toBe(true);
     expect(local5).toBe(true);
     expect(notLocal1).toBe(false);
+});
+
+test('Recognizes hashes separated by non-whitespace characters', () => {
+    const test1 = `1DB2D73D2F341ED85551FC341F88E6AB33BEE543C706C9B53469739E3A83FA50,1DB2D73D2F341ED85551FC341F88E6AB33BEE543C706C9B53469739E3A83FA50,1DB2D73D2F341ED85551FC341F88E6AB33BEE543C706C9B53469739E3A83FA50`;
+    expect(test1.match(HASH_REGEX)?.length).toBe(3);
+});
+
+test('Recognizes file names', () => {
+    const test1 = `
+    C:\\asdf.txt + C:\\Windows\\system32\\explorer.exe
+    D:\\fffffff.exe`;
+    console.log(test1);
+    expect(test1.match(FILE_REGEX)?.length).toBe(3);
 });

@@ -147,7 +147,7 @@ test('Tests other transformation of various IOCs', () => {
     expect(lowerMd5(md5upper)).toBe('d01726dbb7ca105a949c85e30618a390');
     expect(lowerSha256(sha256upper)).toBe('1db2d73d2f341ed85551fc341f88e6ab33bee543c706c9b53469739e3a83fa50');
     expect(lowerMd5(lowerSha256(notAHash))).toBe(notAHash);
-})
+});
 
 test('Tests proper formatting of date strings', () => {
     const dateTest = /\d{4}-\d{2}-\d{2}/.exec(todayLocalDate());
