@@ -31,6 +31,7 @@ test('Recognizes local IPv4 addresses', () => {
     const local4 = isLocalIpv4('172.16.2.3');
     const local5 = isLocalIpv4('172.31.2.3');
     const notLocal1 = isLocalIpv4('8.8.8.8');
+    const notLocal2 = isLocalIpv4('8.10.8.8');
 
     expect(local1).toBe(true);
     expect(local2).toBe(true);
@@ -38,6 +39,7 @@ test('Recognizes local IPv4 addresses', () => {
     expect(local4).toBe(true);
     expect(local5).toBe(true);
     expect(notLocal1).toBe(false);
+    expect(notLocal2).toBe(false);
 });
 
 test('Recognizes hashes separated by non-whitespace characters', () => {
