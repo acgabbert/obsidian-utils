@@ -245,7 +245,6 @@ class CodeModal extends Modal {
             .addButton((btn) => 
             btn
                 .setButtonText("Copy to clipboard")
-                .setCta()
                 .onClick(async () => {
                     if (!this.code.replacedCode)
                     await navigator.clipboard.writeText(this.code.replacedCode);

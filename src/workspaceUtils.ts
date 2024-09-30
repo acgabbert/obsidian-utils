@@ -40,8 +40,7 @@ function addButtonToContainer(el: HTMLElement, buttonText: string): ButtonCompon
      * @returns the newly created button component
      */
     const button = new ButtonComponent(el)
-        .setButtonText(buttonText)
-        .setCta();
+        .setButtonText(buttonText);
     return button;
 }
 
