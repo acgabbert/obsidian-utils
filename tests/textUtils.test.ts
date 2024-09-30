@@ -1,4 +1,30 @@
-import { addUniqueValuesToArray, Code, constructMacroRegex, defangDomain, defangEmail, defangIp, DOMAIN_REGEX, extractMacros, findFirstByRegex, folderPrefs, friendlyDatetime, getValidTld, IP_REGEX, IPv6_REGEX, isLocalIpv4, localDateTime, lowerMd5, lowerSha256, parseCodeBlocks, refangIoc, removeArrayDuplicates, replaceMacros, todayFolderStructure, todayLocalDate, validateDomain, validateDomains } from "../src";
+import { 
+    Code,
+    constructMacroRegex,
+    defangDomain,
+    defangEmail,
+    defangIp,
+    DOMAIN_REGEX,
+    extractMacros,
+    findFirstByRegex,
+    folderPrefs,
+    friendlyDatetime,
+    getValidTld,
+    IP_REGEX,
+    IPv6_REGEX,
+    isLocalIpv4,
+    localDateTime,
+    lowerMd5,
+    lowerSha256,
+    parseCodeBlocks,
+    refangIoc,
+    removeArrayDuplicates,
+    replaceMacros,
+    todayFolderStructure,
+    todayLocalDate,
+    validateDomain,
+    validateDomains
+} from "../src";
 
 // Defang/Re-fang functions
 test('Defangs IP address', () => {
@@ -59,22 +85,6 @@ Get-ChildItem {{file}}
     expect(results.sort()).toEqual(expectedResults)
 });
 
-test('Recognizes local IPv4 addresses', () => {
-    const local1 = isLocalIpv4('10.1.2.3');
-    const local2 = isLocalIpv4('192.168.1.2');
-    const local3 = isLocalIpv4('127.0.0.1');
-    const local4 = isLocalIpv4('172.16.2.3');
-    const local5 = isLocalIpv4('172.31.2.3');
-    const notLocal1 = isLocalIpv4('8.8.8.8');
-
-    expect(local1).toBe(true);
-    expect(local2).toBe(true);
-    expect(local3).toBe(true);
-    expect(local4).toBe(true);
-    expect(local5).toBe(true);
-    expect(notLocal1).toBe(false);
-})
-
 // Macro tests
 test('Tests replacement of macros', () => {
     const macros = new Map<string, string>();
@@ -83,7 +93,7 @@ test('Tests replacement of macros', () => {
     const script = 'ls /Users/{{user}}/Downloads/{{file}}'
     const result1 = replaceMacros(script, macros);
     expect(result1).toBe('ls /Users/acgabbert/Downloads/testFile.dmg');
-})
+});
 
 test('Tests construction of macro regex', () => {
     const result1 = constructMacroRegex('file');
@@ -91,20 +101,6 @@ test('Tests construction of macro regex', () => {
     const result2 = constructMacroRegex(/(user|account)/i);
     expect(result2).toEqual(/(user|account)(?:\s*[:=]\s*|\s+)(((?:[^}\s]*\w[^}\s]*)+))/gi);
 });
-
-// Regex tests
-test('Tests finding regex matches', () => {
-    const testStringIpv4 = `Two IP addresses:
-        8.8.8.8
-        9.9.9.9`
-    expect(findFirstByRegex(testStringIpv4, IP_REGEX)).toBe('8.8.8.8');
-    expect(findFirstByRegex(testStringIpv4, DOMAIN_REGEX)).toBe(null);
-
-    const testStringIpv6 = `Two more IP addresses:
-        1:2:3:4:5:6:7:8
-        8.8.8.8`
-    expect(findFirstByRegex(testStringIpv6, IPv6_REGEX)).toBe('1:2:3:4:5:6:7:8');
-})
 
 // Other transformations
 test('Friendly prints date/time (e.g. "[DATE] at [TIME]")', () => {
@@ -151,7 +147,7 @@ test('Tests other transformation of various IOCs', () => {
     expect(lowerMd5(md5upper)).toBe('d01726dbb7ca105a949c85e30618a390');
     expect(lowerSha256(sha256upper)).toBe('1db2d73d2f341ed85551fc341f88e6ab33bee543c706c9b53469739e3a83fa50');
     expect(lowerMd5(lowerSha256(notAHash))).toBe(notAHash);
-})
+});
 
 test('Tests proper formatting of date strings', () => {
     const dateTest = /\d{4}-\d{2}-\d{2}/.exec(todayLocalDate());

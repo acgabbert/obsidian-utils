@@ -1,7 +1,8 @@
 import { App, Modal, Notice, Setting, SuggestModal } from "obsidian";
-import { constructMacroRegex, extractMacros, extractMatches, FILE_REGEX, MACRO_REGEX } from "./textUtils";
+import { constructMacroRegex, extractMacros, extractMatches } from "./textUtils";
 import { getActiveNoteContent } from "./workspaceUtils";
 import { datePickerSettingEl } from "./domUtils";
+import { FILE_REGEX, MACRO_REGEX } from "./regex";
 
 export { CodeListModal, CodeModal, ErrorModal, InputModal };
 
