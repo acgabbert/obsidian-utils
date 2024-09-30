@@ -4,6 +4,7 @@ export {
     checkFolderExistsRecursive,
     createFolderIfNotExists,
     createNote,
+    getAttachments,
     getBacklinks,
     noteAppend,
     noteReplace,
@@ -98,11 +99,28 @@ function getBacklinks(notePath: string, app: App, resolved = false): Array<strin
     } else {
         backlinks = app.metadataCache.unresolvedLinks[notePath];
     }
-    const retval = []
+    const retval = [];
     for (const i in backlinks) {
         retval.push(i);
     }
     return retval;
+}
+
+/**
+ * Get an array of linked non-markdown (presumably attachment) files in a note.
+ * @param notePath the path of the note to check for attachment links
+ * @param app the current App class instance
+ */
+function getAttachments(notePath: string, app: App): Array<string> {
+    let attachments: string[] = [];
+    const links = getBacklinks(notePath, app, true);
+    links.forEach((link) => {
+        const file = app.vault.getAbstractFileByPath(link);
+        if (file && file instanceof TFile && file.extension !== "md") {
+            attachments.push(file.path);
+        }
+    });
+    return attachments;
 }
 
 /**
