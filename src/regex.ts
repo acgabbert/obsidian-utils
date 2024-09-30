@@ -29,8 +29,16 @@ export const HASH_REGEX = new RegExp(
     "(?=$|[^a-f0-9]+)",  // end of string or non-hex character
     "gi"  // flags
 );
-//export const FILE_REGEX = /(?<=^|\s|")((\w:\\|[\\/]|^)(?:[^\\/]+[\\/]){0,}(?:[^\\/\n"|]+[\\/]?)+(\.\w+))/gi;
-export const FILE_REGEX = /(?:^|\s|")((\w:\\|[\\/])[^\\/]+[\\/]([^\\/\n"|]+[\\/]?)+(\.\w+)?)/gi;
+export const FILE_REGEX = new RegExp(
+    "(?<=^|\\s|\")" +  // beginning of string, space, or open quote
+    "(" +
+    "(?:\\w:\\\\|[\\\\/])" +  // drive letter or leading slash
+    "(?:[^\\\\/:][\\\\/]?)+" +  // 
+    "[^\\\\/\\n\"|]+\\.\\w+" +  // filename with extension
+    ")",
+    "gi"
+)
+console.log(FILE_REGEX);
 
 function possiblyDefangedVal(val: string): string {
     return `\\[?${val}\\]?`;
