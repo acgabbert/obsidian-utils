@@ -6,11 +6,33 @@ import { FILE_REGEX, MACRO_REGEX } from "./regex";
 
 export { CodeListModal, CodeModal, ErrorModal, InputModal };
 
-export const supportedMacros = new Map<RegExp, RegExp[]>();
-supportedMacros.set(/user(name)?/gi, [constructMacroRegex(/user\.?(?:\s*named?)?/)]); // username
-supportedMacros.set(/(host|computer|comp)(name)?/gi, [constructMacroRegex(/(?:host|computer|comp)\.?\s*(?:named?)?/)]); // hostname/computername
-supportedMacros.set(/(hash|sha256|sha)/gi, [constructMacroRegex(/(?:hash|sha\s*256|sha)/)]); // hash
-supportedMacros.set(/(file(path)?|path)(name)?/gi, [FILE_REGEX, constructMacroRegex(/(?:(?:file\s*(?:path)?|path|attachments?)\.?\s*(?:name)?)/)]); // file
+export interface SupportedMacro {
+    name: string;
+    macroRegex: RegExp[];
+    valueRegex: RegExp;
+}
+
+const userMacro: SupportedMacro = {
+    name: "User",
+    macroRegex: [constructMacroRegex(/user\.?(?:\s*named?)?/)],
+    valueRegex: /user(name)?/gi
+};
+const hostNameMacro: SupportedMacro = {
+    name: "Hostname",
+    macroRegex: [constructMacroRegex(/(?:host|computer|comp)\.?\s*(?:named?)?/)],
+    valueRegex: /(host|computer|comp)(name)?/gi
+};
+const hashMacro: SupportedMacro = {
+    name: "Hash",
+    macroRegex: [constructMacroRegex(/(?:hash|sha\s*256|sha)/)],
+    valueRegex: /(hash|sha256|sha)/gi
+};
+const fileMacro: SupportedMacro = {
+    name: "Filename",
+    macroRegex: [FILE_REGEX, constructMacroRegex(/(?:(?:file\s*(?:path)?|path|attachments?)\.?\s*(?:name)?)/)],
+    valueRegex: /(file(path)?|path)(name)?/gi
+};
+export const supportedMacros: SupportedMacro[] = [userMacro, hostNameMacro, hashMacro, fileMacro];
 
 export interface Code {
     content: string,
@@ -46,10 +68,10 @@ type Class<CodeModal> = new (...args: any[]) => CodeModal;
 
 class CodeListModal extends SuggestModal<string> {
     content: Map<string, Code>;
-    macros: Map<RegExp, RegExp[]>;
+    macros: SupportedMacro[];
     codeModal: Class<CodeModal>;
 
-    constructor(app: App, content: Map<string, Code>, macros?: Map<RegExp, RegExp[]>, codeModal?: Class<CodeModal>) {
+    constructor(app: App, content: Map<string, Code>, macros?: SupportedMacro[], codeModal?: Class<CodeModal>) {
         super(app);
         this.content = content;
         this.macros = supportedMacros;
@@ -101,11 +123,11 @@ class CodeListModal extends SuggestModal<string> {
 class InputModal extends Modal {
     content: ScriptObject;
     replacements: Map<string, string>;
-    supportedMacros: Map<RegExp, RegExp[]>;
+    supportedMacros: SupportedMacro[];
     codeModal: Class<CodeModal>;
     datePicker: boolean;
 
-    constructor(app: App, content: ScriptObject, passedMacros?: Map<RegExp, RegExp[]> | null, codeModal?: Class<CodeModal>) {
+    constructor(app: App, content: ScriptObject, passedMacros?: SupportedMacro[] | null, codeModal?: Class<CodeModal>) {
         super(app);
         this.content = content;
         this.replacements = new Map();
@@ -126,10 +148,10 @@ class InputModal extends Modal {
                 displayMacro = macroWord.charAt(0).toUpperCase() + macroWord.slice(1);
             }
             let match = false;
-            this.supportedMacros.forEach((value, key) => {
-                const tester = new RegExp(key.source, key.flags);
+            this.supportedMacros.forEach((macro) => {
+                const tester = new RegExp(macro.valueRegex.source, macro.valueRegex.flags);
                 if (!tester.test(contentMacro) || !activeNote) return;
-                const matches = extractMatches(activeNote, value);
+                const matches = extractMatches(activeNote, macro.macroRegex);
                 if (!(matches.length > 0)) return;
                 match = true;
                 contentEl.createEl("h2", {text: displayMacro});
