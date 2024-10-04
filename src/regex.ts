@@ -49,7 +49,6 @@ export const FILE_REGEX = new RegExp(
     ")",
     "gi"
 )
-console.log(FILE_REGEX);
 
 function possiblyDefangedVal(val: string): string {
     return `\\[?${val}\\]?`;
