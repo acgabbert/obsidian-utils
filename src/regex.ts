@@ -1,6 +1,7 @@
 // regex for possibly defanged values
 const ipv4Octet = "(?:25[0-5]|" +  // 250-255
                   "(2[0-4]|1{0,1}[0-9]){0,1}[0-9])";  // 0-249
+const ipv6Octet = "[0-9a-fA-F]{1,4}"
 export const IP_REGEX = new RegExp(
     "(?:[^\\d]|^)(" +
     ipv4Octet +
@@ -16,7 +17,17 @@ export const IP_REGEX = new RegExp(
 export { IP_REGEX as IPv4_REGEX };
 export const IPv6_REGEX = new RegExp(
     "(" +
-    "(?:::|[0-9a-f]{1,4}::?)(?:[0-9a-f]{1,4}::?){0,6}(?:[0-9a-f]{1,4}|::?)" +
+    `(${ipv6Octet}:){7,7}${ipv6Octet}|` +
+    `(${ipv6Octet}:){1,7}:|` +
+    `(${ipv6Octet}:){1,6}:${ipv6Octet}|` +
+    `(${ipv6Octet}:){1,5}(:${ipv6Octet}){1,2}|` +
+    `(${ipv6Octet}:){1,4}(:${ipv6Octet}){1,3}|` +
+    `(${ipv6Octet}:){1,3}(:${ipv6Octet}){1,4}|` +
+    `(${ipv6Octet}:){1,2}(:${ipv6Octet}){1,5}|` +
+    `${ipv6Octet}:((:${ipv6Octet}){1,6})|` +
+    `:((:${ipv6Octet}){1,7}|:)|` +
+    "fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|" +
+    "::(ffff(:0{1,4}){0,1}:){0,1}" +
     ")",
     "gi"  // flags
 );

@@ -22,6 +22,24 @@ test('Properly recognizes valid IPv4 addresses', () => {
     expect(validIp1).toMatch(IP_REGEX);
     expect(validIp2).toMatch(IP_REGEX);
     expect(invalidIp1).not.toMatch(IP_REGEX);
+});
+
+test('Properly recognizes valid IPv6 addresses', () => {
+    const ipv6_1 = '1::';
+    const ipv6_2 = '1::8';
+    const ipv6_3 = '1::7:8';
+    const ipv6_4 = '1::6:7:8';
+    const ipv6_5 = '1::5:6:7:8';
+    const ipv6_6 = '1::4:5:6:7:8';
+    const invalidIpv6_1 = '11:24';
+
+    expect(ipv6_1).toMatch(IPv6_REGEX);
+    expect(ipv6_2).toMatch(IPv6_REGEX);
+    expect(ipv6_3).toMatch(IPv6_REGEX);
+    expect(ipv6_4).toMatch(IPv6_REGEX);
+    expect(ipv6_5).toMatch(IPv6_REGEX);
+    expect(ipv6_6).toMatch(IPv6_REGEX);
+    expect(invalidIpv6_1).not.toMatch(IPv6_REGEX);
 })
 
 test('Recognizes local IPv4 addresses', () => {
