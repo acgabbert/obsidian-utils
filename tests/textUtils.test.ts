@@ -1,3 +1,4 @@
+import { mockFile, request } from "../__mocks__/obsidian";
 import { 
     Code,
     constructMacroRegex,
@@ -20,6 +21,7 @@ import {
     refangIoc,
     removeArrayDuplicates,
     replaceMacros,
+    replaceTemplateText,
     todayFolderStructure,
     todayLocalDate,
     validateDomain,
@@ -175,4 +177,20 @@ test('Tests proper folder structure', () => {
     prefs.quarter = true;
     const structure4 = todayFolderStructure(prefs);
     expect(structure4.length).toBe(4);
+});
+
+test('Tests error handling', async () => {
+    request.mockImplementationOnce(() => {
+        throw new Error('Mocked error');
+    });
+    expect(await getValidTld()).toBe(null);
+});
+
+test('Tests template behavior', () => {
+    const template = `# {{title}}\nCreated: {{date}} {{time}}\n---\n{{content}}`;
+    const content = "Test note";
+    const replaced = replaceTemplateText(template, content, mockFile);
+    const dateTime = localDateTime().split(" ");
+
+    expect(replaced).toBe(`# ${mockFile.name.split(".")[0]}\nCreated: ${dateTime[0]} ${dateTime[1]}\n---\n${content}`);
 })
