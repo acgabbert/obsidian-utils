@@ -28,7 +28,7 @@ export const IPv6_REGEX = new RegExp(
     `:((:${ipv6Octet}){1,7}|:)|` +
     "fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|" +
     "::(ffff(:0{1,4}){0,1}:){0,1}" +
-    ")",
+    `)(?!${ipv6Octet})`,  // positive lookahead to improve matching
     "gi"  // flags
 );
 export const LOCAL_IP_REGEX = /^((127\.)|(10\.)|(172\.1[6-9]\.)|(172\.2[0-9]\.)|(172\.3[0-1]\.)|(192\.168\.))/g;

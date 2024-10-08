@@ -9,9 +9,10 @@ test('Tests finding regex matches', () => {
     expect(findFirstByRegex(testStringIpv4, DOMAIN_REGEX)).toBe(null);
 
     const testStringIpv6 = `Two more IP addresses:
+        2600:4::185
         1:2:3:4:5:6:7:8
         8.8.8.8`
-    expect(findFirstByRegex(testStringIpv6, IPv6_REGEX)).toBe('1:2:3:4:5:6:7:8');
+    expect(findFirstByRegex(testStringIpv6, IPv6_REGEX)).toBe('2600:4::185');
 });
 
 test('Properly recognizes valid IPv4 addresses', () => {
