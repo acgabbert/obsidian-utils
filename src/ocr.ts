@@ -77,7 +77,7 @@ async function initializeWorker(): Promise<Worker> {
     return worker;
 }
 
-async function ocrMultiple(app: App, files: TFile[] | string[] | null, worker: Worker | null) {
+async function ocrMultiple(app: App, files: TFile[] | string[] | null, worker: Worker | null): Promise<Array<string> | null> {
     if (!worker) {
         console.error('OCR worker is not initialized')
         return null;
@@ -101,7 +101,7 @@ async function ocrMultiple(app: App, files: TFile[] | string[] | null, worker: W
             continue;
         }
         const buffer = Buffer.from(arrBuff);
-        const text = await ocrQueue.addToQueue(buffer);
+        const text = await ocrQueue.addToQueue(buffer) as string;
         results.push(text);
     }
 
