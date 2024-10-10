@@ -3,9 +3,11 @@ import { createWorker, Worker } from "tesseract.js";
 
 export { initializeWorker, ocr, readImageFile };
 
-async function readImageFile(app: App, file: TFile | null): Promise<ArrayBuffer | null> {
+async function readImageFile(app: App, file: TFile | null): Promise<Buffer | null> {
     if (!file) return null;
-    return await app.vault.readBinary(file);
+    const arrBuff = await app.vault.readBinary(file);
+    const buffer = Buffer.from(arrBuff);
+    return buffer;
 }
 
 async function ocr(app: App, file: TFile | null, worker: Worker | null): Promise<string | null> {
@@ -14,10 +16,10 @@ async function ocr(app: App, file: TFile | null, worker: Worker | null): Promise
         return null;
     }
 
-    const arrBuff = await readImageFile(app, file);
-    if (!arrBuff) return null;
-    const buffer = Buffer.from(arrBuff);
+    const buffer = await readImageFile(app, file);
+    if (!buffer) return null;
     const ret = await worker.recognize(buffer);
+    console.log(ret.data.text);
     return ret.data.text;
 }
 
