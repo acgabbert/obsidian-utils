@@ -1,4 +1,4 @@
-import { findFirstByRegex, IP_REGEX, DOMAIN_REGEX, IPv6_REGEX, isLocalIpv4, HASH_REGEX, FILE_REGEX } from "../src";
+import { findFirstByRegex, IP_REGEX, DOMAIN_REGEX, IPv6_REGEX, isLocalIpv4, HASH_REGEX, FILE_REGEX, addUniqueValuesToArray } from "../src";
 
 // Regex tests
 test('Tests finding regex matches', () => {
@@ -73,3 +73,13 @@ test('Recognizes file names', () => {
     console.log(test1);
     expect(test1.match(FILE_REGEX)?.length).toBe(3);
 });
+
+test('Does not capture preceding url-encoded characters', () => {
+    const test1 = "https%3A%2F%2Fwww%2Evirustotal.com%2Fgui%2Fdomain%2Fgoogle.com";
+    const results1 = test1.matchAll(DOMAIN_REGEX);
+    const actualResults = addUniqueValuesToArray([], results1);
+    expect(actualResults.length).toBe(2);
+    console.log(actualResults);
+    expect(actualResults[0]).toBe('virustotal.com');
+    expect(actualResults[1]).toBe('google.com');
+})

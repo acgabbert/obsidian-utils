@@ -3,7 +3,7 @@ const ipv4Octet = "(?:25[0-5]|" +  // 250-255
                   "(2[0-4]|1{0,1}[0-9]){0,1}[0-9])";  // 0-249
 const ipv6Octet = "[0-9a-fA-F]{1,4}"
 export const IP_REGEX = new RegExp(
-    "(?:[^\\d]|^)(" +
+    "(?:%[0-9a-f]{2})?(?:[^\\d]|^)(" +
     ipv4Octet +
     possiblyDefangedVal("\\.") +
     ipv4Octet +
@@ -16,7 +16,7 @@ export const IP_REGEX = new RegExp(
 );
 export { IP_REGEX as IPv4_REGEX };
 export const IPv6_REGEX = new RegExp(
-    "(" +
+    "(?:%[0-9a-f]{2})?(" +
     `(${ipv6Octet}:){7,7}${ipv6Octet}|` +
     `(${ipv6Octet}:){1,7}:|` +
     `(${ipv6Octet}:){1,6}:${ipv6Octet}|` +
@@ -33,15 +33,15 @@ export const IPv6_REGEX = new RegExp(
 );
 export const LOCAL_IP_REGEX = /^((127\.)|(10\.)|(172\.1[6-9]\.)|(172\.2[0-9]\.)|(172\.3[0-1]\.)|(192\.168\.))/g;
 export const MACRO_REGEX = /({{([^}]+)}})/g;
-export const DOMAIN_REGEX = /((?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(\.|\[\.\]))+[a-z][a-z0-9-]{0,61}[a-z](?=\.?)\b)/gi;
+export const DOMAIN_REGEX = /(?:%[0-9a-f]{2})?((?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(\.|\[\.\]))+[a-z][a-z0-9-]{0,61}[a-z](?=\.?)\b)/gi;
 export const HASH_REGEX = new RegExp(
-    "(?<=^|[^a-f0-9]+)" +  // beginning of string or non-hex character
+    "(?:%[0-9a-f]{2})?(?<=^|[^a-f0-9]+)" +  // beginning of string or non-hex character
     "([a-f0-9]{64}|[a-f0-9]{40}|[a-f0-9]{32})" +  // standard hash length (SHA256, MD5, SHA1)
     "(?=$|[^a-f0-9]+)",  // end of string or non-hex character
     "gi"  // flags
 );
 export const FILE_REGEX = new RegExp(
-    "(?<=^|\\s|\")" +  // beginning of string, space, or open quote
+    "(?:%[0-9a-f]{2})?(?<=^|\\s|\")" +  // beginning of string, space, or open quote
     "(" +
     "(?:\\w:\\\\|[\\\\/])" +  // drive letter or leading slash
     "(?:[^\\\\/:][\\\\/]?)+" +  // 
