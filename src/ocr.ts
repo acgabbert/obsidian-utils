@@ -67,7 +67,6 @@ async function ocr(app: App, file: TFile | null, worker: Worker | null): Promise
     const buffer = await readImageFile(app, file);
     if (!buffer) return null;
     const ret = await worker.recognize(buffer);
-    console.log(ret.data.text);
     return ret.data.text;
 }
 
