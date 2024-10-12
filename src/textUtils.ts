@@ -43,8 +43,8 @@ async function getValidTld(): Promise<string[] | null> {
         if (!tlds.slice(-1)[0]) tlds.pop(); // last line empty string
         return tlds;
     } catch (e) {
-        console.log('failed to get valid TLDs');
-        console.log(e);
+        console.error('failed to get valid TLDs');
+        console.error(e);
         return null;
     }
 }

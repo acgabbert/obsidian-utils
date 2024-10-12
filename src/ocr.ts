@@ -13,42 +13,44 @@ class OcrQueue {
     worker: Worker;
     queue: OcrQueueItem[];
     processing: boolean;
+    processingLock: Promise<void> | null;
 
     constructor(worker: Worker) {
         this.worker = worker;
         this.queue = [];
         this.processing = false;
+        this.processingLock = null;
     }
 
     async addToQueue(image: Buffer) {
         return new Promise((resolve, reject) => {
             this.queue.push({image, resolve, reject});
-            this.processQueue();
+            if (!this.processing) {this.processQueue();}
         });
     }
 
     async processQueue() {
-        if (this.processing || this.queue.length === 0) {
-            return;
-        }
-        const queueItem = this.queue.shift();
-        if (!queueItem) {
-            this.processing = false;
+        if (this.processing) {
             return;
         }
         this.processing = true;
-        const { image, resolve, reject } = queueItem;
 
-        try {
-            const {data: { text }} = await(this.worker.recognize(image));
-            resolve(text);
-        } catch (error) {
-            reject(error);
-        } finally {
-            this.processing = false;
-            this.processQueue();
-        }
-    }
+        while (this.queue.length > 0) {
+            const queueItem = this.queue[0];
+            if (!queueItem) continue;
+            const { image, resolve, reject } = queueItem;
+    
+            try {
+                const { data: { text } } = await this.worker.recognize(image);
+                resolve(text);
+                this.queue.shift();
+            } catch (error) {
+                reject(error);
+                this.queue.shift();
+            }
+        }        
+        this.processing = false;
+    }    
 }
 
 async function readImageFile(app: App, file: TFile | null): Promise<Buffer | null> {
@@ -77,10 +79,9 @@ async function initializeWorker(): Promise<Worker> {
     return worker;
 }
 
-async function ocrMultiple(app: App, files: TFile[] | string[] | null, worker: Worker | null): Promise<Array<string> | null> {
+async function ocrMultiple(app: App, files: TFile[] | string[] | null, worker: Worker | null) {
     if (!worker) {
-        console.error('OCR worker is not initialized')
-        return null;
+        worker = await initializeWorker();
     }
     if (!files) {
         console.error('No files passed to OCR function');
@@ -88,22 +89,21 @@ async function ocrMultiple(app: App, files: TFile[] | string[] | null, worker: W
     }
 
     const ocrQueue = new OcrQueue(worker);
-    const results = [];
-    
+    const results: Array<string> = [];
     for (let file of files) {
         if (typeof file === "string") {
             const fileObj = app.vault.getFileByPath(file);
             if (fileObj) file = fileObj;
-            else continue;
+            else {console.log("couldn't find file"); continue};
         }
         const arrBuff = await readImageFile(app, file);
         if (!arrBuff) {
+            console.log('no buffer')
             continue;
         }
         const buffer = Buffer.from(arrBuff);
-        const text = await ocrQueue.addToQueue(buffer) as string;
+        const text = await ocrQueue.addToQueue(buffer);
         results.push(text);
     }
-
     return results;
 }
