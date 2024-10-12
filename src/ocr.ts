@@ -94,16 +94,16 @@ async function ocrMultiple(app: App, files: TFile[] | string[] | null, worker: W
         if (typeof file === "string") {
             const fileObj = app.vault.getFileByPath(file);
             if (fileObj) file = fileObj;
-            else {console.log("couldn't find file"); continue};
+            else {console.error(`couldn't find file ${file}`); continue};
         }
         const arrBuff = await readImageFile(app, file);
         if (!arrBuff) {
-            console.log('no buffer')
+            console.error(`failed to convert ${file.path} to buffer for OCR`)
             continue;
         }
         const buffer = Buffer.from(arrBuff);
         const text = await ocrQueue.addToQueue(buffer);
-        results.push(text);
+        results.push(text as string);
     }
     return results;
 }
