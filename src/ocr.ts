@@ -31,16 +31,13 @@ class OcrQueue {
 
     async processQueue() {
         if (this.processing) {
-            console.log('already processing, exiting')
             return;
         }
         this.processing = true;
-        console.log(`set processing to ${this.processing}`)
 
         while (this.queue.length > 0) {
             const queueItem = this.queue[0];
             if (!queueItem) continue;
-            console.log(`processing; remaining ${this.queue.length}`);
             const { image, resolve, reject } = queueItem;
     
             try {
@@ -53,7 +50,6 @@ class OcrQueue {
             }
         }        
         this.processing = false;
-        //console.log(`set processing to ${this.processing}`)
     }    
 }
 
@@ -73,7 +69,6 @@ async function ocr(app: App, file: TFile | null, worker: Worker | null): Promise
     const buffer = await readImageFile(app, file);
     if (!buffer) return null;
     const ret = await worker.recognize(buffer);
-    //console.log(ret.data.text);
     return ret.data.text;
 }
 
@@ -85,7 +80,6 @@ async function initializeWorker(): Promise<Worker> {
 }
 
 async function ocrMultiple(app: App, files: TFile[] | string[] | null, worker: Worker | null) {
-    console.log('entering ocrMultiple');
     if (!worker) {
         worker = await initializeWorker();
     }
@@ -96,15 +90,12 @@ async function ocrMultiple(app: App, files: TFile[] | string[] | null, worker: W
 
     const ocrQueue = new OcrQueue(worker);
     const results: Array<string> = [];
-    //console.log(files);
     for (let file of files) {
-        console.log(`entering loop for OCR queue - ${file}`);
         if (typeof file === "string") {
             const fileObj = app.vault.getFileByPath(file);
             if (fileObj) file = fileObj;
             else {console.log("couldn't find file"); continue};
         }
-        //console.log(`working on ${file.path}...`);
         const arrBuff = await readImageFile(app, file);
         if (!arrBuff) {
             console.log('no buffer')
@@ -113,7 +104,6 @@ async function ocrMultiple(app: App, files: TFile[] | string[] | null, worker: W
         const buffer = Buffer.from(arrBuff);
         const text = await ocrQueue.addToQueue(buffer);
         results.push(text);
-        //console.log(`pushed ${text}`);
     }
     return results;
 }
