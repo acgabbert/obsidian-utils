@@ -79,9 +79,11 @@ async function initializeWorker(): Promise<Worker> {
     return worker;
 }
 
-async function ocrMultiple(app: App, files: TFile[] | string[] | null, worker: Worker | null) {
+async function ocrMultiple(app: App, files: TFile[] | string[] | null, worker: Worker | null): Promise<Map<string, string> | null> {
+    const resultsMap: Map<string, string> = new Map();
     if (!worker) {
-        worker = await initializeWorker();
+        console.error('No worker to complete OCR.')
+        return null;
     }
     if (!files) {
         console.error('No files passed to OCR function');
@@ -89,12 +91,15 @@ async function ocrMultiple(app: App, files: TFile[] | string[] | null, worker: W
     }
 
     const ocrQueue = new OcrQueue(worker);
-    const results: Array<string> = [];
+    //const results: Array<string> = [];
     for (let file of files) {
         if (typeof file === "string") {
+            resultsMap.set(file, "");
             const fileObj = app.vault.getFileByPath(file);
             if (fileObj) file = fileObj;
             else {console.error(`couldn't find file ${file}`); continue};
+        } else {
+            resultsMap.set(file.path, "");
         }
         const arrBuff = await readImageFile(app, file);
         if (!arrBuff) {
@@ -103,7 +108,8 @@ async function ocrMultiple(app: App, files: TFile[] | string[] | null, worker: W
         }
         const buffer = Buffer.from(arrBuff);
         const text = await ocrQueue.addToQueue(buffer);
-        results.push(text as string);
+        //results.push(text as string);
+        resultsMap.set(file.path, text as string);
     }
-    return results;
+    return resultsMap;
 }
