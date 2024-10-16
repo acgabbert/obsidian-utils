@@ -1,7 +1,7 @@
 import { request, RequestUrlParam } from "obsidian";
 import { getIocType } from "..";
 import type { VtDomainResponse, VtFileResponse, VtIpResponse } from "./models/virusTotal";
-import { vtDefaultFileTemplate } from "./templates/virusTotal";
+import { vtDefaultDomainTemplate, vtDefaultFileTemplate, vtDefaultIpTemplate } from "./templates/virusTotal";
 
 export { virusTotalRequest };
 
@@ -24,9 +24,10 @@ async function virusTotalRequest(val: string, key: string, template?: string): P
                 data = JSON.parse(await request(vtParams)).data as VtIpResponse;
             } catch(err) {
                 console.error(err);
-                return "VirusTotal request failed.";
+                resp = "VirusTotal request failed.";
+                break;
             }
-            if (!template) template = vtDefaultTemplate;
+            if (!template) template = vtDefaultIpTemplate;
             resp = vtIpTemplate(template, data);
             break;
         case 'domain':
@@ -35,9 +36,10 @@ async function virusTotalRequest(val: string, key: string, template?: string): P
                 data = JSON.parse(await request(vtParams)).data as VtDomainResponse;
             } catch(err) {
                 console.error(err);
-                return "VirusTotal request failed.";
+                resp = "VirusTotal request failed.";
+                break;
             }
-            if (!template) template = vtDefaultTemplate;
+            if (!template) template = vtDefaultDomainTemplate;
             resp = vtDomainTemplate(template, data);
             break;
         case 'hash':
@@ -46,31 +48,14 @@ async function virusTotalRequest(val: string, key: string, template?: string): P
                 data = JSON.parse(await request(vtParams)).data as VtFileResponse;
             } catch(err) {
                 console.error(err);
-                return "VirusTotal request failed.";
+                resp = "VirusTotal request failed.";
+                break;
             }
-            if (!template) template = vtDefaultTemplate;
+            if (!template) template = vtDefaultFileTemplate;
             resp = vtFileTemplate(template, data);
             break;
         case null:
-            return null;
-    }
-    try {
-        data = await request(vtParams);
-    } catch(err) {
-        console.error(err);
-        return "VirusTotal request failed.";
-    }
-    switch(iocType) {
-        case 'ip':
-            data = JSON.parse(data).data as VtIpResponse;
-            break;
-        case 'domain':
-            data = JSON.parse(data).data as VtDomainResponse;
-            break;
-        case 'hash':
-            data = JSON.parse(data).data as VtFileResponse;
-            if (!template) template = vtDefaultFileTemplate;
-            resp = vtFileTemplate(template, data);
+            resp = `Search query invalid: ${val}`;
             break;
     }
     return resp;
