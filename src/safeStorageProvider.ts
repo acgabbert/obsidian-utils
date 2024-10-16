@@ -11,7 +11,7 @@ if (Platform.isDesktop) {
 }
 
 function encryptString(val: string): string | null {
-    if (safeStorage && safeStorage.isEncryptionAvailable()) {
+    if (Platform.isDesktop && safeStorage && safeStorage.isEncryptionAvailable()) {
         try {
             const buff = safeStorage.encryptString(val) as Buffer;
             return buff.toString("base64");
@@ -25,7 +25,7 @@ function encryptString(val: string): string | null {
 }
 
 function decryptString(val: string): string | null {
-    if (safeStorage && safeStorage.isEncryptionAvailable()) {
+    if (Platform.isDesktop && safeStorage && safeStorage.isEncryptionAvailable()) {
         try {
             const buff = Buffer.from(val, "base64");
             return safeStorage.decryptString(buff) as string;

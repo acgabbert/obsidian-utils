@@ -12,3 +12,6 @@ INFO`);
 export const mockFile: TFile = {
     name: "file.md"
 } as unknown as TFile;
+export const Platform = {
+    isDesktop: true
+};
