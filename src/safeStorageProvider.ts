@@ -1,6 +1,6 @@
-import { Notice, Platform } from "obsidian";
+import { Notice, Platform, Plugin } from "obsidian";
 
-export { encryptString, decryptString };
+export { encryptString, decryptString, loadPrivateData, savePrivateData };
 
 // @ts-ignore
 let safeStorage: Electron.SafeStorage | null = null;
@@ -10,6 +10,12 @@ if (Platform.isDesktop) {
     safeStorage = require("electron")?.remote?.safeStorage;
 }
 
+
+/**
+ * 
+ * @param val 
+ * @returns 
+ */
 function encryptString(val: string): string {
     if (Platform.isDesktop && safeStorage && safeStorage.isEncryptionAvailable()) {
         try {
@@ -26,6 +32,12 @@ function encryptString(val: string): string {
     return "";
 }
 
+
+/**
+ * 
+ * @param val 
+ * @returns 
+ */
 function decryptString(val: string): string {
     if (Platform.isDesktop && safeStorage && safeStorage.isEncryptionAvailable()) {
         try {
@@ -40,4 +52,52 @@ function decryptString(val: string): string {
     console.error(`Safe storage provider not available.`);
     new Notice("Failed to decrypt input string. Check console for error details.");
     return "";
+}
+
+
+/**
+ * 
+ * @param plugin an Obsidian plugin
+ * @returns the path of privateData.json within the plugin folder
+ */
+function getPrivateDataPath(plugin: Plugin): string {
+    return `${plugin.app.vault.configDir}/plugins/${plugin.manifest.id}/privateData.json`;
+}
+
+
+/**
+ * 
+ * @param plugin an Obsidian plugin
+ * @param data the private data to save
+ */
+async function savePrivateData(plugin: Plugin, data: Object): Promise<void> {
+    try {
+        const privateDataPath = getPrivateDataPath(plugin);
+        const dataString = JSON.stringify(data, null, 2);
+        await plugin.app.vault.adapter.write(privateDataPath, dataString);
+    } catch(err) {
+        console.error("Error saving private data.", err);
+    }
+}
+
+
+/**
+ * 
+ * @param plugin an Obsidian plugin
+ * @returns the plugin data contained in privateData.json
+ */
+async function loadPrivateData(plugin: Plugin): Promise<Object | null> {
+    try {
+        const privateDataPath = getPrivateDataPath(plugin);
+        const fileExists = await plugin.app.vault.adapter.exists(privateDataPath);
+        if (fileExists) {
+            const data = await plugin.app.vault.adapter.read(privateDataPath);
+            return JSON.parse(data);
+        } else {
+            return null;
+        }
+    } catch(err) {
+        console.error("Error loading private data.", err);
+        return null;
+    }
 }

@@ -12,6 +12,7 @@ export {
     findFirstByRegex,
     friendlyDatetime,
     getValidTld,
+    getIocType,
     isLocalIpv4,
     localDateTime,
     lowerSha256,
@@ -26,7 +27,7 @@ export {
     validateDomain,
     validateDomains
 }
-import { LOCAL_IP_REGEX, MACRO_REGEX } from "./regex";
+import { DOMAIN_REGEX, HASH_REGEX, IP_REGEX, IPv6_REGEX, LOCAL_IP_REGEX, MACRO_REGEX } from "./regex";
 
 export const TLD_URL = 'https://data.iana.org/TLD/tlds-alpha-by-domain.txt';
 
@@ -362,4 +363,24 @@ function isLocalIpv4(ip: string): boolean {
     const localIpTest = new RegExp(LOCAL_IP_REGEX.source, LOCAL_IP_REGEX.flags);
     if (localIpTest.exec(ip)) return true;
     else return false;
+}
+
+
+export type IocType = 'hash' | 'ip' | 'domain';
+/**
+ * Get the type of an IOC (hash, IP, domain)
+ * @param val an IOC value
+ * @returns a string representation of the IOC type (hash, ip, domain) or null
+ */
+function getIocType(val: string): IocType | null {
+    val = val.trim().toLowerCase();
+    const ipTest = new RegExp(IP_REGEX.source, IP_REGEX.flags);
+    if (ipTest.exec(val)) return 'ip';
+    const ipv6Test = new RegExp(IPv6_REGEX.source, IPv6_REGEX.flags);
+    if (ipv6Test.exec(val)) return 'ip';
+    const domainTest = new RegExp(DOMAIN_REGEX.source, DOMAIN_REGEX.flags);
+    if (domainTest.exec(val)) return 'domain';
+    const hashTest = new RegExp(HASH_REGEX.source, HASH_REGEX.flags);
+    if (hashTest.exec(val)) return 'hash';
+    return null;
 }
