@@ -1,7 +1,7 @@
 import { request, RequestUrlParam } from "obsidian";
 import { getIocType } from "..";
-import type { VtDomainResponse, VtFileResponse, VtIpResponse } from "./models/virusTotal";
-import { vtDefaultDomainTemplate, vtDefaultFileTemplate, vtDefaultIpTemplate } from "./templates/virusTotal";
+import type { VtDomainResponse, VtFileResponse, VtIpResponse } from "./models/virusTotalModels";
+import { vtDefaultDomainTemplate, vtDefaultFileTemplate, vtDefaultIpTemplate } from "./templates/virusTotalTemplates";
 
 export { virusTotalRequest };
 
@@ -62,14 +62,20 @@ async function virusTotalRequest(val: string, key: string, template?: string): P
     return resp;
 }
 
-function vtFileTemplate(template: string, vtObj: VtFileResponse): string {
+function vtFileTemplate(vtObj: VtFileResponse, template?: string): string {
+    if (!template) template = vtDefaultFileTemplate;
+
     return template;
 }
 
-function vtIpTemplate(template: string, vtObj: VtIpResponse): string {
+function vtIpTemplate(vtObj: VtIpResponse, template?: string): string {
+    if (!template) template = vtDefaultIpTemplate;
+
     return template;
 }
 
-function vtDomainTemplate(template: string, vtObj: VtDomainResponse): string {
+function vtDomainTemplate(vtObj: VtDomainResponse, template?: string): string {
+    if (!template) template = vtDefaultDomainTemplate;
+
     return template;
 }

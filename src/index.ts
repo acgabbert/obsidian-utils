@@ -9,4 +9,4 @@ export * from './sidebar';
 export * from './textUtils';
 export * from './vaultUtils';
 export * from './workspaceUtils';
-export * from './api/vt';
+export * from './api/virusTotal';
