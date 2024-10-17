@@ -27,8 +27,8 @@ async function virusTotalRequest(val: string, key: string, template?: string): P
                 resp = "VirusTotal request failed.";
                 break;
             }
-            if (!template) template = vtDefaultIpTemplate;
-            resp = vtIpTemplate(template, data);
+            //if (!template) template = vtDefaultIpTemplate;
+            //resp = vtIpTemplate(template, data);
             break;
         case 'domain':
             vtParams.url = `${vtBaseUrl}domains/${val}`;
@@ -39,8 +39,8 @@ async function virusTotalRequest(val: string, key: string, template?: string): P
                 resp = "VirusTotal request failed.";
                 break;
             }
-            if (!template) template = vtDefaultDomainTemplate;
-            resp = vtDomainTemplate(template, data);
+            //if (!template) template = vtDefaultDomainTemplate;
+            //resp = vtDomainTemplate(template, data);
             break;
         case 'hash':
             vtParams.url = `${vtBaseUrl}files/${val}`;
@@ -51,13 +51,14 @@ async function virusTotalRequest(val: string, key: string, template?: string): P
                 resp = "VirusTotal request failed.";
                 break;
             }
-            if (!template) template = vtDefaultFileTemplate;
-            resp = vtFileTemplate(template, data);
+            //if (!template) template = vtDefaultFileTemplate;
+            //resp = vtFileTemplate(template, data);
             break;
         case null:
-            resp = `Search query invalid: ${val}`;
+            //resp = `Search query invalid: ${val}`;
             break;
     }
+    resp = JSON.stringify(data, undefined, 2);
     return resp;
 }
 

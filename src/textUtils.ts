@@ -365,12 +365,14 @@ function isLocalIpv4(ip: string): boolean {
     else return false;
 }
 
+
+export type IocType = 'hash' | 'ip' | 'domain';
 /**
  * Get the type of an IOC (hash, IP, domain)
  * @param val an IOC value
  * @returns a string representation of the IOC type (hash, ip, domain) or null
  */
-function getIocType(val: string): string | null {
+function getIocType(val: string): IocType | null {
     val = val.trim().toLowerCase();
     const ipTest = new RegExp(IP_REGEX.source, IP_REGEX.flags);
     if (ipTest.exec(val)) return 'ip';
