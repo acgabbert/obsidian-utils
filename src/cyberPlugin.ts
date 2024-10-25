@@ -1,4 +1,4 @@
-import { Plugin } from "obsidian";
+import { Plugin, WorkspaceLeaf } from "obsidian";
 import { searchSite } from "./sidebar";
 
 interface CyberPluginSettings {
@@ -9,4 +9,5 @@ interface CyberPluginSettings {
 export class CyberPlugin extends Plugin {
 	settings: CyberPluginSettings | undefined;
 	validTld: string[] | null | undefined;
+	sidebarContainers: Map<string, WorkspaceLeaf> | undefined;
 }
