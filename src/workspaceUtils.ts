@@ -1,7 +1,7 @@
 import { App, ButtonComponent, MarkdownView, Plugin, TFile, Workspace } from "obsidian";
 import { CyberPlugin } from "./cyberPlugin";
 
-export { addButtonContainer, addButtonToContainer, getActiveNoteContent };
+export { addButtonContainer, addButtonToContainer, getActiveNoteContent, toggleView };
 
 function addButtonContainer(workspace: Workspace, file: TFile, className: string, rootFolder?: string) {
     /**
