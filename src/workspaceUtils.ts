@@ -1,7 +1,7 @@
 import { App, ButtonComponent, MarkdownView, Plugin, TFile, Workspace } from "obsidian";
 import { CyberPlugin } from "./cyberPlugin";
 
-export { addButtonContainer, addButtonToContainer, getActiveNoteContent };
+export { addButtonContainer, addButtonToContainer, getActiveNoteContent, toggleView };
 
 function addButtonContainer(workspace: Workspace, file: TFile, className: string, rootFolder?: string) {
     /**
@@ -69,11 +69,11 @@ async function toggleView(type: string, plugin: CyberPlugin): Promise<void> {
     let leaf = plugin.sidebarContainers?.get(type) || workspace.getLeavesOfType(type).first() || null;
     if (!leaf) {
         leaf = workspace.getRightLeaf(false);
-        revealed = !workspace.rightSplit.collapsed && leaf?.getViewState().type != type;
     }
     if (!leaf) return;
+    revealed = !workspace.rightSplit.collapsed && leaf.getViewState().type == type;
     await leaf.setViewState({type: type, active: true});
     plugin.sidebarContainers?.set(type, leaf);
-    if (!workspace.rightSplit.collapsed && revealed) workspace.rightSplit.collapse();
+    if (revealed) workspace.rightSplit.collapse();
     else await workspace.revealLeaf(plugin.sidebarContainers?.get(type)!);
 }
