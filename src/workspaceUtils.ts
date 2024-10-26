@@ -1,7 +1,7 @@
 import { App, ButtonComponent, MarkdownView, Plugin, TFile, Workspace } from "obsidian";
 import { CyberPlugin } from "./cyberPlugin";
 
-export { addButtonContainer, addButtonToContainer, getActiveNoteContent, toggleView };
+export { addButtonContainer, addButtonToContainer, getActiveNoteContent };
 
 function addButtonContainer(workspace: Workspace, file: TFile, className: string, rootFolder?: string) {
     /**
@@ -54,26 +54,4 @@ async function getActiveNoteContent(app: App): Promise<string | null> {
     const file = app.workspace.getActiveFile();
     if (!file) return null;
     return await app.vault.cachedRead(file);
-}
-
-async function toggleView(type: string, plugin: CyberPlugin): Promise<void> {
-    /**
-     * Activate a view of the given type in the right sidebar.
-     * If the sidebar is not already open, open it and show the given view type.
-     * If the sidebar is already open, show the given view type.
-     * If the sidebar is open, and the given view type is active, collapse the sidebar.
-     * @param type a view type
-     */
-    const {workspace} = plugin.app;
-    let revealed = false;
-    let leaf = plugin.sidebarContainers?.get(type) || workspace.getLeavesOfType(type).first() || null;
-    if (!leaf) {
-        leaf = workspace.getRightLeaf(false);
-    }
-    if (!leaf) return;
-    revealed = !workspace.rightSplit.collapsed && leaf.getViewState().type == type;
-    await leaf.setViewState({type: type, active: true});
-    plugin.sidebarContainers?.set(type, leaf);
-    if (revealed) workspace.rightSplit.collapse();
-    else await workspace.revealLeaf(plugin.sidebarContainers?.get(type)!);
 }
