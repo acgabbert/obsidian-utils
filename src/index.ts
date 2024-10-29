@@ -5,6 +5,7 @@ export * from './modal';
 export * from './ocr';
 export * from './regex';
 export * from './safeStorageProvider';
+export * from './searchSites';
 export * from './sidebar';
 export * from './textUtils';
 export * from './vaultUtils';

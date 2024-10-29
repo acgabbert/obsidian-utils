@@ -2,69 +2,9 @@ import { ButtonComponent, ItemView, TAbstractFile, TFile, WorkspaceLeaf } from "
 import { extractMatches, refangIoc, removeArrayDuplicates, validateDomain } from "./textUtils";
 import { openDetails, removeElements } from "./domUtils";
 import { DOMAIN_REGEX, HASH_REGEX, IP_REGEX } from "./regex";
+import { defaultSites, DOMAIN_EXCLUSIONS, IP_EXCLUSIONS, searchSite } from "./searchSites";
 
 export const VIEW_TYPE = "plugin-sidebar";
-
-export const VT_SEARCH = 'https://virustotal.com/gui/search/%s';
-export const IPDB_SEARCH = 'https://abuseipdb.com/check/%s';
-export const GOOGLE_SEARCH = 'https://google.com/search?q=%s';
-
-export interface ParsedIndicators {
-    title: string;
-    items: string[];
-    sites: searchSite[] | undefined;
-}
-
-export interface searchSite {
-    name: string
-    shortName: string
-    site: string
-    ip: boolean
-    hash: boolean
-    domain: boolean
-    multisearch: boolean
-    separator?: string
-    enabled: boolean
-}
-
-export const vtSearch: searchSite = {
-    name: 'VirusTotal',
-    shortName: 'VT',
-    site: VT_SEARCH,
-    ip: true,
-    hash: true,
-    domain: true,
-    multisearch: true,
-    separator: '%20',
-    enabled: true
-}
-
-export const ipdbSearch: searchSite = {
-    name: 'AbuseIPDB',
-    shortName: 'IPDB',
-    site: IPDB_SEARCH,
-    ip: true,
-    hash: false,
-    domain: true,
-    multisearch: false,
-    enabled: true
-}
-
-export const googleSearch: searchSite = {
-    name: 'Google',
-    shortName: 'Google',
-    site: GOOGLE_SEARCH,
-    ip: true,
-    hash: true,
-    domain: true,
-    multisearch: false,
-    enabled: true
-}
-
-export const IP_EXCLUSIONS = ["127.0.0.1"]
-export const DOMAIN_EXCLUSIONS = ["google.com"]
-
-export const defaultSites: searchSite[] = [vtSearch, ipdbSearch, googleSearch];
 
 export class PluginSidebar extends ItemView {
     ips: string[] | undefined;

@@ -1,7 +1,7 @@
 import { App, Plugin, PluginManifest, WorkspaceLeaf } from "obsidian";
-import { searchSite } from "./sidebar";
+import { searchSite } from "./searchSites";
 
-interface CyberPluginSettings {
+export interface CyberPluginSettings {
 	validTld: string[];
 	searchSites: searchSite[];
 }
