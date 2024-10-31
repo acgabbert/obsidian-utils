@@ -44,19 +44,19 @@ export const HASH_REGEX = new RegExp(
 );
 export const SHA256_REGEX = new RegExp(
     hash_start +
-    "([a-f0-9]{64}" +  // SHA256 hash length
+    "([a-f0-9]{64})" +  // SHA256 hash length
     hash_end,
     "gi"  // flags
 );
 export const MD5_REGEX = new RegExp(
     hash_start +
-    "([a-f0-9]{40}" +  // SHA256 hash length
+    "([a-f0-9]{40})" +  // SHA256 hash length
     hash_end,
     "gi"  // flags
 );
 export const SHA1_REGEX = new RegExp(
     hash_start +
-    "([a-f0-9]{32}" +  // SHA256 hash length
+    "([a-f0-9]{32})" +  // SHA256 hash length
     hash_end,
     "gi"  // flags
 );
