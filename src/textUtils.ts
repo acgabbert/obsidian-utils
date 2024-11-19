@@ -129,12 +129,15 @@ function defangEmail(text: string): string {
 }
 
 /**
- * refang an IOC (domain, URL, IP address)
+ * refang an IOC (domain, URL, IP, email address)
  * @param text a string with defanged IOC(s)
  * @returns the string with IOCs re-fanged
  */
 function refangIoc(text: string): string {
     let retval = text.replaceAll('[.]', '.');
+    retval = retval.replaceAll('(.)', '.');
+    retval = retval.replaceAll('[/]', '/');
+    retval = retval.replaceAll('[@]', '@');
     retval = retval.replaceAll('hxxp', 'http');
     retval = retval.replaceAll('[:]', ':');
     retval = retval.replaceAll('[://]', '://');

@@ -66,6 +66,8 @@ test('Refangs IOCs', () => {
     expect(url1).toBe('https://www.google.com/xyz');
     const ip1 = refangIoc('8.8.8[.]8');
     expect(ip1).toBe('8.8.8.8');
+    const email1 = refangIoc('aaron[@]gabbert(.)me');
+    expect(email1).toBe('aaron@gabbert.me');
 });
 
 // Text extraction functions
