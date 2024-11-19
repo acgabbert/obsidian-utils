@@ -9,14 +9,15 @@ export const CENSYS_SEARCH = 'https://search.censys.io/hosts/%s';
 export interface ParsedIndicators {
     title: string;
     items: string[];
-    sites: searchSite[] | undefined;
+    sites: SearchSite[] | undefined;
 }
 
-export interface searchSite {
+export interface SearchSite {
     name: string
     shortName: string
     site: string
     ip: boolean
+    ipv6?: boolean
     hash: boolean
     domain: boolean
     multisearch: boolean
@@ -24,11 +25,12 @@ export interface searchSite {
     enabled: boolean
 }
 
-export const vtSearch: searchSite = {
+export const vtSearch: SearchSite = {
     name: 'VirusTotal',
     shortName: 'VT',
     site: VT_SEARCH,
     ip: true,
+    ipv6: true,
     hash: true,
     domain: true,
     multisearch: true,
@@ -36,33 +38,36 @@ export const vtSearch: searchSite = {
     enabled: true
 }
 
-export const ipdbSearch: searchSite = {
+export const ipdbSearch: SearchSite = {
     name: 'AbuseIPDB',
     shortName: 'IPDB',
     site: IPDB_SEARCH,
     ip: true,
+    ipv6: true,
     hash: false,
     domain: true,
     multisearch: false,
     enabled: true
 }
 
-export const googleSearch: searchSite = {
+export const googleSearch: SearchSite = {
     name: 'Google',
     shortName: 'Google',
     site: GOOGLE_SEARCH,
     ip: true,
+    ipv6: true,
     hash: true,
     domain: true,
     multisearch: false,
     enabled: true
 }
 
-export const urlscanSearch: searchSite = {
+export const urlscanSearch: SearchSite = {
     name: 'URLScan',
     shortName: 'URLScan',
     site: URLSCAN_SEARCH,
     ip: true,
+    ipv6: true,
     hash: false,
     domain: true,
     multisearch: false,
@@ -72,4 +77,9 @@ export const urlscanSearch: searchSite = {
 export const IP_EXCLUSIONS = ["127.0.0.1"]
 export const DOMAIN_EXCLUSIONS = ["google.com"]
 
-export const defaultSites: searchSite[] = [vtSearch, ipdbSearch, googleSearch];
+export const defaultSites: SearchSite[] = [
+    vtSearch,
+    ipdbSearch,
+    googleSearch,
+    urlscanSearch
+];
