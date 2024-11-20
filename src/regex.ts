@@ -61,5 +61,5 @@ export const FILE_REGEX = new RegExp(
 )
 
 function possiblyDefangedVal(val: string): string {
-    return `\\[?${val}\\]?`;
+    return `[\\[(]?${val}[\\])]?`;
 }
