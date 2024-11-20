@@ -1,5 +1,8 @@
 import { App, Plugin, PluginManifest, WorkspaceLeaf } from "obsidian";
+import { EventEmitter } from "events";
+
 import { SearchSite } from "./searchSites";
+import { Matcher } from "./matcher";
 
 export interface CyberPluginSettings {
 	validTld: string[];
@@ -10,9 +13,13 @@ export class CyberPlugin extends Plugin {
 	settings: CyberPluginSettings | undefined;
 	validTld: string[] | null | undefined;
 	sidebarContainers: Map<string, WorkspaceLeaf> | undefined;
+	matcher: Matcher;
+	private emitter: EventEmitter;
 
 	constructor(app: App, manifest: PluginManifest) {
 		super(app, manifest);
+		this.matcher = new Matcher();
+		this.emitter = new EventEmitter();
 	}
 
 	async activateView(type: string): Promise<void> {
@@ -23,5 +30,15 @@ export class CyberPlugin extends Plugin {
 		const {workspace} = this.app;
 		let leaf = await workspace.ensureSideLeaf(type, 'right', {active: true});
 		this.sidebarContainers?.set(type, leaf);
+	}
+	
+	on(event: string, callback: (...args: any[]) => void) {
+		this.emitter.on(event, callback);
+		return () => this.emitter.off(event, callback);
+	}
+	
+	async saveSettings() {
+		await this.saveData(this.settings);
+		this.emitter.emit('settings-changed');
 	}
 }
