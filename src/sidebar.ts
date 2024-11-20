@@ -2,7 +2,7 @@ import { ButtonComponent, ItemView, TAbstractFile, TFile, WorkspaceLeaf } from "
 import { extractMatches, refangIoc, removeArrayDuplicates, validateDomain } from "./textUtils";
 import { openDetails, removeElements } from "./domUtils";
 import { DOMAIN_REGEX, HASH_REGEX, IP_REGEX } from "./regex";
-import { defaultSites, DOMAIN_EXCLUSIONS, IP_EXCLUSIONS, searchSite } from "./searchSites";
+import { defaultSites, DOMAIN_EXCLUSIONS, IP_EXCLUSIONS, SearchSite } from "./searchSites";
 
 export const VIEW_TYPE = "plugin-sidebar";
 
@@ -19,7 +19,7 @@ export class PluginSidebar extends ItemView {
     ipEl: HTMLDivElement | undefined;
     domainEl: HTMLDivElement | undefined;
     hashEl: HTMLDivElement | undefined;
-    searchSites: searchSite[];
+    searchSites: SearchSite[];
     sidebarTitle: string;
     validTld: string[] | undefined;
 
@@ -34,7 +34,7 @@ export class PluginSidebar extends ItemView {
     tableClass = "sidebar-table-row";
     tdClass = "sidebar-table-item";
 
-    constructor(leaf: WorkspaceLeaf, searchSites?: searchSite[], validTld?: string[]) {
+    constructor(leaf: WorkspaceLeaf, searchSites?: SearchSite[], validTld?: string[]) {
         super(leaf);
         this.registerActiveFileListener();
         this.registerOpenFile();
