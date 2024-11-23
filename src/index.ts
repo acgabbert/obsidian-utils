@@ -1,6 +1,7 @@
 export * from './cyberPlugin';
 export * from './domUtils';
 export * from './editorUtils';
+export * from './matcher';
 export * from './modal';
 export * from './ocr';
 export * from './regex';
