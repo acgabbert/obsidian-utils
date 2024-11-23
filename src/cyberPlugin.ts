@@ -13,12 +13,10 @@ export class CyberPlugin extends Plugin {
 	settings: CyberPluginSettings | undefined;
 	validTld: string[] | null | undefined;
 	sidebarContainers: Map<string, WorkspaceLeaf> | undefined;
-	matcher: Matcher;
 	private emitter: EventEmitter;
 
 	constructor(app: App, manifest: PluginManifest) {
 		super(app, manifest);
-		this.matcher = new Matcher();
 		this.emitter = new EventEmitter();
 	}
 
@@ -39,6 +37,6 @@ export class CyberPlugin extends Plugin {
 	
 	async saveSettings() {
 		await this.saveData(this.settings);
-		this.emitter.emit('settings-changed');
+		this.emitter.emit('settings-change');
 	}
 }
