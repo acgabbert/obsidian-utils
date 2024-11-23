@@ -136,8 +136,11 @@ function defangEmail(text: string): string {
 function refangIoc(text: string): string {
     let retval = text.replaceAll('[.]', '.');
     retval = retval.replaceAll('(.)', '.');
+    retval = retval.replaceAll(String.raw`\.`, '.');
     retval = retval.replaceAll('[/]', '/');
+    retval = retval.replaceAll('[//]', '/');
     retval = retval.replaceAll('[@]', '@');
+    retval = retval.replaceAll('[at]', '@');
     retval = retval.replaceAll('hxxp', 'http');
     retval = retval.replaceAll('[:]', ':');
     retval = retval.replaceAll('[://]', '://');
