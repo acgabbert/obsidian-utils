@@ -61,6 +61,19 @@ test('Recognizes local IPv4 addresses', () => {
     expect(notLocal2).toBe(false);
 });
 
+test('Recognizes defanged IOCs', () => {
+    const validIp1 = '8.8.8(.)8';
+    const validIp2 = '1.2.3[.]4';
+
+    expect(validIp1).toMatch(IP_REGEX);
+    expect(validIp2).toMatch(IP_REGEX);
+
+    const domain1 = 'google(.)com';
+    const domain2 = String.raw`facebook\.com`;
+    expect(domain1).toMatch(DOMAIN_REGEX);
+    expect(domain2).toMatch(DOMAIN_REGEX);
+})
+
 test('Recognizes hashes separated by non-whitespace characters', () => {
     const test1 = `1DB2D73D2F341ED85551FC341F88E6AB33BEE543C706C9B53469739E3A83FA50,1DB2D73D2F341ED85551FC341F88E6AB33BEE543C706C9B53469739E3A83FA50,1DB2D73D2F341ED85551FC341F88E6AB33BEE543C706C9B53469739E3A83FA50`;
     expect(test1.match(HASH_REGEX)?.length).toBe(3);

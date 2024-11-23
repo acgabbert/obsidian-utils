@@ -3,13 +3,13 @@ const ipv4Octet = "(?:25[0-5]|" +  // 250-255
                   "(2[0-4]|1{0,1}[0-9]){0,1}[0-9])";  // 0-249
 const ipv6Octet = "[0-9a-fA-F]{1,4}"
 export const IP_REGEX = new RegExp(
-    "(?:%[0-9a-f]{2})?(?:[^\\d]|^)(" +
+    String.raw`(?:%[0-9a-f]{2})?(?:[^\d]|^)(` +
     ipv4Octet +
-    possiblyDefangedVal("\\.") +
+    possiblyDefangedVal(String.raw`\.`) +
     ipv4Octet +
-    possiblyDefangedVal("\\.") +
+    possiblyDefangedVal(String.raw`\.`) +
     ipv4Octet +
-    possiblyDefangedVal("\\.") +
+    possiblyDefangedVal(String.raw`\.`) +
     ipv4Octet +
     ")",
     "g"  // flags
@@ -33,7 +33,13 @@ export const IPv6_REGEX = new RegExp(
 );
 export const LOCAL_IP_REGEX = /^((127\.)|(10\.)|(172\.1[6-9]\.)|(172\.2[0-9]\.)|(172\.3[0-1]\.)|(192\.168\.))/g;
 export const MACRO_REGEX = /({{([^}]+)}})/g;
-export const DOMAIN_REGEX = /(?:%[0-9a-f]{2})?((?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(\.|\[\.\]))+[a-z][a-z0-9-]{0,61}[a-z](?=\.?)\b)/gi;
+const DOMAIN_REGEX_OLD = /(?:%[0-9a-f]{2})?((?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(\.|\[\.\]))+[a-z][a-z0-9-]{0,61}[a-z](?=\.?)\b)/gi;
+export const DOMAIN_REGEX = new RegExp(
+    String.raw`(?:%[0-9a-f]{2})?((?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?` +
+    possiblyDefangedVal(String.raw`\.`) + `)+` + 
+    String.raw`[a-z][a-z0-9-]{0,61}[a-z](?=\.?)\b)`,
+    "gi"  // flags
+);
 const hash_start = "(?:%[0-9a-f]{2})?(?<=^|[^a-f0-9]+)";  // beginning of string or non-hex character
 const hash_end = "(?=$|[^a-f0-9]+)";  // end of string or non-hex character
 export const HASH_REGEX = new RegExp(
@@ -61,15 +67,15 @@ export const SHA1_REGEX = new RegExp(
     "gi"  // flags
 );
 export const FILE_REGEX = new RegExp(
-    "(?:%[0-9a-f]{2})?(?<=^|\\s|\")" +  // beginning of string, space, or open quote
+    String.raw`(?:%[0-9a-f]{2})?(?<=^|\s|")` +  // beginning of string, space, or open quote
     "(" +
-    "(?:\\w:\\\\|[\\\\/])" +  // drive letter or leading slash
-    "(?:[^\\\\/:][\\\\/]?)+" +  // 
-    "[^\\\\/\\n\"|]+\\.\\w+" +  // filename with extension
+    String.raw`(?:\w:\\|[\\/])` +  // drive letter or leading slash
+    String.raw`(?:[^\\/:][\\/]?)+` +  // 
+    String.raw`[^\\/\n"|]+\.\w+` +  // filename with extension
     ")",
     "gi"
 )
 
 function possiblyDefangedVal(val: string): string {
-    return `\\[?${val}\\]?`;
+    return String.raw`[\[\(\\]?${val}[\]\)]?`;
 }
