@@ -13,7 +13,7 @@ export interface ParsedIndicators {
     title: string;
     items: string[];
     sites: SearchSite[] | undefined;
-    exclusions: IndicatorExclusion[];
+    exclusions: IndicatorExclusion[] | undefined;
 }
 
 export function filterExclusions(items: string[], exclusions: IndicatorExclusion[]): string[] {
