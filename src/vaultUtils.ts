@@ -112,15 +112,15 @@ function getBacklinks(notePath: string, app: App, resolved = false): Array<strin
  * @param app the current App class instance
  */
 function getAttachments(notePath: string, app: App): Array<string> {
-    let attachments: string[] = [];
     const links = getBacklinks(notePath, app, true);
+    const attachments = new Set<string>();
     links.forEach((link) => {
         const file = app.vault.getAbstractFileByPath(link);
         if (file && file instanceof TFile && file.extension !== "md") {
-            attachments.push(file.path);
+            attachments.add(file.path);
         }
     });
-    return attachments;
+    return Array.from(attachments);
 }
 
 /**
