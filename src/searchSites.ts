@@ -7,10 +7,23 @@ export const SPUR_SEARCH = 'https://app.spur.us/context?q=%s';
 export const SHODAN_SEARCH = 'https://www.shodan.io/host/%s';
 export const CENSYS_SEARCH = 'https://search.censys.io/hosts/%s';
 
+export type IndicatorExclusion = string | RegExp;
+
 export interface ParsedIndicators {
     title: string;
     items: string[];
     sites: SearchSite[] | undefined;
+    exclusions: IndicatorExclusion[];
+}
+
+export function filterExclusions(items: string[], exclusions: IndicatorExclusion[]): string[] {
+    return items.filter(item => 
+        !exclusions.some(exclusion => 
+            typeof exclusion === 'string'
+                ? item === exclusion
+                : exclusion.test(item)
+        )
+    );
 }
 
 export interface SearchSite {
