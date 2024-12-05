@@ -111,7 +111,9 @@ async function ocrMultiple(app: App, files: TFile[] | string[] | null, worker: W
             const text = await ocrQueue.addToQueue(buffer);
             resultsMap.set(file.path, text as string);
         } catch(error) {
-            resultsMap.set(file.path, error instanceof Error ? error.message : String(error));
+            let message = (error instanceof Error ? error.message : String(error))
+            console.error(message);
+            resultsMap.set(file.path, message);
         }
     }
     return resultsMap;
