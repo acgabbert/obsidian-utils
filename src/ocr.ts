@@ -107,9 +107,12 @@ async function ocrMultiple(app: App, files: TFile[] | string[] | null, worker: W
             continue;
         }
         const buffer = Buffer.from(arrBuff);
-        const text = await ocrQueue.addToQueue(buffer);
-        //results.push(text as string);
-        resultsMap.set(file.path, text as string);
+        try {
+            const text = await ocrQueue.addToQueue(buffer);
+            resultsMap.set(file.path, text as string);
+        } catch(error) {
+            resultsMap.set(file.path, error instanceof Error ? error.message : String(error));
+        }
     }
     return resultsMap;
 }
