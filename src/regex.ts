@@ -16,9 +16,9 @@ export const IP_REGEX = new RegExp(
 );
 export { IP_REGEX as IPv4_REGEX };
 export const IPv6_REGEX = new RegExp(
-    `((?:${ipv6Octet}:){7}${ipv6Octet}|` +  // 8 segments
-    `(?:(?:${ipv6Octet}:)*${ipv6Octet})?::` +  // zero or more segments followed by ::
-    `(?:(?:${ipv6Octet}:)*${ipv6Octet})?)`,  // zero or more segments
+    `((?:${ipv6Octet}${possiblyDefangedVal(":")}){7}${ipv6Octet}|` +  // 8 segments
+    `(?:(?:${ipv6Octet}${possiblyDefangedVal(":")})*${ipv6Octet})?${possiblyDefangedVal("::")}` +  // zero or more segments followed by ::
+    `(?:(?:${ipv6Octet}${possiblyDefangedVal(":")})*${ipv6Octet})?)`,  // zero or more segments
     "gi"  // flags
 )
 export const LOCAL_IP_REGEX = /^((127\.)|(10\.)|(172\.1[6-9]\.)|(172\.2[0-9]\.)|(172\.3[0-1]\.)|(192\.168\.))/g;

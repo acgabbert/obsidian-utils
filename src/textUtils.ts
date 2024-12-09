@@ -143,6 +143,7 @@ function refangIoc(text: string): string {
     retval = retval.replaceAll('[at]', '@');
     retval = retval.replaceAll('hxxp', 'http');
     retval = retval.replaceAll('[:]', ':');
+    retval = retval.replaceAll('[::]', ':');
     retval = retval.replaceAll('[://]', '://');
     retval = retval.toLowerCase();
     return retval;
