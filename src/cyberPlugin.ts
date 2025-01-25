@@ -13,7 +13,7 @@ export class CyberPlugin extends Plugin {
 	settings: CyberPluginSettings | undefined;
 	validTld: string[] | null | undefined;
 	sidebarContainers: Map<string, WorkspaceLeaf> | undefined;
-	emitter: EventEmitter;
+	protected emitter: EventEmitter;
 
 	constructor(app: App, manifest: PluginManifest) {
 		super(app, manifest);
