@@ -12,9 +12,9 @@ if (Platform.isDesktop) {
 
 
 /**
- * 
- * @param val 
- * @returns 
+ * Encrypt a string using the Electron safe storage API.
+ * @param val the string to be encrypted.
+ * @returns the base64-encoded, encrypted string, or an empty string.
  */
 function encryptString(val: string): string {
     if (Platform.isDesktop && safeStorage && safeStorage.isEncryptionAvailable()) {
@@ -34,9 +34,9 @@ function encryptString(val: string): string {
 
 
 /**
- * 
- * @param val 
- * @returns 
+ * Decrypt a string using the Electron safe storage API.
+ * @param val an encrypted value.
+ * @returns the decrypted value, or an empty string.
  */
 function decryptString(val: string): string {
     if (Platform.isDesktop && safeStorage && safeStorage.isEncryptionAvailable()) {
@@ -56,7 +56,7 @@ function decryptString(val: string): string {
 
 
 /**
- * 
+ * Get the private data path for a plugin
  * @param plugin an Obsidian plugin
  * @returns the path of privateData.json within the plugin folder
  */
@@ -66,7 +66,7 @@ function getPrivateDataPath(plugin: Plugin): string {
 
 
 /**
- * 
+ * Save private data to privateData.json.
  * @param plugin an Obsidian plugin
  * @param data the private data to save
  */
@@ -82,7 +82,7 @@ async function savePrivateData(plugin: Plugin, data: Object): Promise<void> {
 
 
 /**
- * 
+ * Load private data from privateData.json.
  * @param plugin an Obsidian plugin
  * @returns the plugin data contained in privateData.json
  */
