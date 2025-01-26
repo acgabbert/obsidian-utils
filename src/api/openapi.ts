@@ -13,6 +13,12 @@ interface ToolCall {
     }
 }
 
+interface Message {
+    role: Role;
+    content?: string;
+    tool_calls?: ToolCall[];
+}
+
 interface Tool {
     type: 'function';
     function: {
@@ -28,10 +34,7 @@ interface Tool {
 
 interface ChatCompletionRequest {
     model?: string;
-    messages: Array<{
-        role: Role;
-        content?: string;
-    }>;
+    messages: Array<Message>;
     tools?: Array<Tool>;
 }
 
@@ -50,26 +53,68 @@ interface ChatCompletionResponse {
     }>;
 }
 
+interface OpenAiClientConfig {
+    baseUrl?: string;
+    model?: string;
+    apiKey?: string;
+    headers?: Record<string, string>;
+    systemMessage?: string;
+    tools?: Tool[];
+}
+
 class OpenAICompatibleClient {
     baseURL: string;
     apiKey: string;
     headers: Record<string, string>;
+    model: string;
+    private messageHistory!: Message[];
+    private systemMessage?: Message;
+    private tools?: Tool[];
 
-    constructor(
-        baseURL: string = 'https://api.openai.com/v1',
-        apiKey?: string,
-        defaultHeaders: Record<string, string> = {}
-    ) {
-        this.baseURL = baseURL;
-        this.apiKey = apiKey ?? '';
+    constructor(config: OpenAiClientConfig) {
+        this.baseURL = config.baseUrl ?? 'https://api.openai.com/v1';
+        this.apiKey = config.apiKey ?? '';
+        this.model = config.model ?? '';
+        this.tools = config.tools;
         this.headers = {
             'Authorization': this.apiKey ? `Bearer ${this.apiKey}` : '',
             'Content-Type': 'application/json',
-            ...defaultHeaders
+            ...config.headers
         };
+        if (config.systemMessage) {
+            this.systemMessage = {
+                role: 'system',
+                content: config.systemMessage
+            };
+        }
+        this.tools = config.tools;
+        this.clearHistory();
     }
 
-    async chat(requestBody: ChatCompletionRequest): Promise<ChatCompletionResponse> {
+    async chat(content: string): Promise<ChatCompletionResponse> {
+        const userMessage: Message = {
+            role: 'user',
+            content: content
+        }
+
+        this.messageHistory.push(userMessage);
+
+        const messages: Message[] = [];
+
+        if (this.systemMessage) {
+            messages.push(this.systemMessage);
+        }
+
+        messages.push(...this.messageHistory.slice(0, -1));
+
+        messages.push(userMessage);
+
+        const requestBody: ChatCompletionRequest = {
+            messages: messages,
+            model: this.model,
+            tools: this.tools
+        }
+
         try {
             const body = JSON.stringify(requestBody);
             const params = {
@@ -85,5 +130,39 @@ class OpenAICompatibleClient {
             console.error('API request failed:', error);
             throw error;
         }
+    }
+
+    clearHistory(): void {
+        if (this.systemMessage) {
+            this.messageHistory = [{
+                role: 'system',
+                content: this.systemMessage.content
+            }];
+        } else {
+            this.messageHistory = [];
+        }
+    }
+
+    getHistory(): Message[] {
+        return [...this.messageHistory];
+    }
+
+    setSystemPrompt(message: string): void {
+        this.systemMessage = {
+            role: 'system',
+            content: message
+        };
+    }
+
+    setBaseUrl(url: string) {
+        this.baseURL = url;
+    }
+
+    addHeader(key: string, value: string): void {
+        this.headers[key] = value;
+    }
+
+    removeHeader(key: string): void {
+        delete this.headers[key];
     }
 }
