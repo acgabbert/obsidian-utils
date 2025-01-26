@@ -65,6 +65,10 @@ interface OpenAiClientConfig {
     tools?: Tool[];
 }
 
+
+/**
+ * An OpenAI-compatible API client leveraging Obsidian's built-in request function.
+ */
 class OpenAICompatibleClient {
     protected baseURL: string;
     protected apiKey: string;
@@ -94,6 +98,12 @@ class OpenAICompatibleClient {
         this.clearHistory();
     }
 
+
+    /**
+     * Send a user role message to the assistant.
+     * @param content the contents of the message
+     * @returns a ChatCompletionResponse object
+     */
     async chat(content: string): Promise<ChatCompletionResponse> {
         const userMessage: Message = {
             role: 'user',
@@ -105,7 +115,12 @@ class OpenAICompatibleClient {
         return this.conversationRequest();
     }
 
-    async conversationRequest(): Promise<ChatCompletionResponse> {
+
+    /**
+     * Make a conversation request with the current message history.
+     * @returns a ChatCompletionResponse object
+     */
+    private async conversationRequest(): Promise<ChatCompletionResponse> {
         const requestBody: ChatCompletionRequest = {
             messages: this.messageHistory,
             model: this.model,
@@ -130,6 +145,10 @@ class OpenAICompatibleClient {
         }
     }
 
+
+    /**
+     * Clear the current chat history.
+     */
     clearHistory(): void {
         if (this.systemMessage) {
             this.messageHistory = [{
@@ -141,10 +160,20 @@ class OpenAICompatibleClient {
         }
     }
 
+    
+    /**
+     * Get the current chat history.
+     * @returns an array of messages
+     */
     getHistory(): Message[] {
         return [...this.messageHistory];
     }
 
+
+    /**
+     * Set the system message prompt
+     * @param message the system message prompt
+     */
     setSystemPrompt(message: string): void {
         this.systemMessage = {
             role: 'system',
@@ -152,24 +181,52 @@ class OpenAICompatibleClient {
         };
     }
 
+    
+    /**
+     * Set the client base URL
+     * @param url an OpenAI-compatible API base URL
+     */
     setBaseUrl(url: string) {
-        this.baseURL = url;
+        this.baseURL = url.endsWith("/") ? url.slice(0, -1) : url;
     }
 
+
+    /**
+     * Add an HTTP header to be sent with requests
+     * @param key header key
+     * @param value header value
+     */
     addHeader(key: string, value: string): void {
         this.headers[key] = value;
     }
 
+
+    /**
+     * Remove an HTTP header
+     * @param key header key to be removed
+     */
     removeHeader(key: string): void {
         delete this.headers[key];
     }
 
+    
+    /**
+     * Add a tool to the client
+     * @param func a FunctionConfig object
+     */
     addTool(func: FunctionConfig) {
         let tool: Tool = {type: 'function', function: func};
         if (!this.tools) this.tools = [tool];
         else this.tools.push(tool);
     }
 
+
+    /**
+     * Provide the assistant with a tool response
+     * @param id a tool_call_id
+     * @param content the contents of the tool response
+     * @returns a ChatCompletionRequest object
+     */
     async toolResponse(id: string, content: string): Promise<ChatCompletionResponse> {
         this.messageHistory.push({
             role: 'tool',
