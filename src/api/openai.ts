@@ -16,6 +16,7 @@ interface ToolCall {
 interface Message {
     role: Role;
     content?: string;
+    tool_call_id?: string;
     tool_calls?: ToolCall[];
 }
 
@@ -65,10 +66,10 @@ interface OpenAiClientConfig {
 }
 
 class OpenAICompatibleClient {
-    baseURL: string;
-    apiKey: string;
-    headers: Record<string, string>;
-    model: string;
+    protected baseURL: string;
+    protected apiKey: string;
+    protected headers: Record<string, string>;
+    protected model: string;
     private messageHistory!: Message[];
     private systemMessage?: Message;
     private tools?: Tool[];
@@ -100,19 +101,13 @@ class OpenAICompatibleClient {
         }
 
         this.messageHistory.push(userMessage);
+        
+        return this.conversationRequest();
+    }
 
-        const messages: Message[] = [];
-
-        if (this.systemMessage) {
-            messages.push(this.systemMessage);
-        }
-
-        messages.push(...this.messageHistory.slice(0, -1));
-
-        messages.push(userMessage);
-
+    async conversationRequest(): Promise<ChatCompletionResponse> {
         const requestBody: ChatCompletionRequest = {
-            messages: messages,
+            messages: this.messageHistory,
             model: this.model,
             tools: this.tools
         }
@@ -173,5 +168,14 @@ class OpenAICompatibleClient {
         let tool: Tool = {type: 'function', function: func};
         if (!this.tools) this.tools = [tool];
         else this.tools.push(tool);
+    }
+
+    async toolResponse(id: string, content: string): Promise<ChatCompletionResponse> {
+        this.messageHistory.push({
+            role: 'tool',
+            tool_call_id: id,
+            content: content
+        });
+        return this.conversationRequest();
     }
 }
