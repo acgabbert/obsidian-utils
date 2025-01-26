@@ -12,3 +12,4 @@ export * from './textUtils';
 export * from './vaultUtils';
 export * from './workspaceUtils';
 export * from './api/virusTotal';
+export * from './api/openai';
