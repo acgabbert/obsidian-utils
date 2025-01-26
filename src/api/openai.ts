@@ -1,6 +1,6 @@
 import { request, RequestUrlParam } from "obsidian";
 
-export { OpenAICompatibleClient }
+export { OpenAICompatibleClient, Role, ToolCall, Message, Tool, FunctionConfig, ChatCompletionRequest, ChatCompletionResponse, OpenAiClientConfig };
 
 type Role = 'system' | 'user' | 'assistant' | 'developer' | 'tool';
 
@@ -21,15 +21,17 @@ interface Message {
 
 interface Tool {
     type: 'function';
-    function: {
-        name: string,
-        description?: string,
-        parameters: {
-            type: "object",
-            properties: Record<string, unknown>
-        },
-        required?: Array<string>;
-    }
+    function: FunctionConfig
+}
+
+interface FunctionConfig {
+    name: string,
+    description?: string,
+    parameters: {
+        type: "object",
+        properties: Record<string, unknown>
+    },
+    required?: Array<string>;
 }
 
 interface ChatCompletionRequest {
@@ -125,6 +127,7 @@ class OpenAICompatibleClient {
                 method: 'POST'
             } as RequestUrlParam;
             const response = JSON.parse(await request(params)) as ChatCompletionResponse;
+            response.choices.forEach((message) => this.messageHistory.push(message.message));
             return response;
         } catch (error) {
             console.error('API request failed:', error);
@@ -164,5 +167,11 @@ class OpenAICompatibleClient {
 
     removeHeader(key: string): void {
         delete this.headers[key];
+    }
+
+    addTool(func: FunctionConfig) {
+        let tool: Tool = {type: 'function', function: func};
+        if (!this.tools) this.tools = [tool];
+        else this.tools.push(tool);
     }
 }
