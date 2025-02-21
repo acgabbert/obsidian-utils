@@ -1,11 +1,11 @@
-import { findFirstByRegex, IP_REGEX, DOMAIN_REGEX, IPv6_REGEX, isLocalIpv4, HASH_REGEX, FILE_REGEX, addUniqueValuesToArray } from "../src";
+import { findFirstByRegex, IPv4_REGEX, DOMAIN_REGEX, IPv6_REGEX, isLocalIpv4, HASH_REGEX, FILE_REGEX, addUniqueValuesToArray } from "../src";
 
 // Regex tests
 test('Tests finding regex matches', () => {
     const testStringIpv4 = `Two IP addresses:
         8.8.8.8
         9.9.9.9`
-    expect(findFirstByRegex(testStringIpv4, IP_REGEX)).toBe('8.8.8.8');
+    expect(findFirstByRegex(testStringIpv4, IPv4_REGEX)).toBe('8.8.8.8');
     expect(findFirstByRegex(testStringIpv4, DOMAIN_REGEX)).toBe(null);
 
     const testStringIpv6 = `Two more IP addresses:
@@ -20,9 +20,9 @@ test('Properly recognizes valid IPv4 addresses', () => {
     const validIp2 = '1.2.3.4';
     const invalidIp1 = '433.8.8.8';
 
-    expect(validIp1).toMatch(IP_REGEX);
-    expect(validIp2).toMatch(IP_REGEX);
-    expect(invalidIp1).not.toMatch(IP_REGEX);
+    expect(validIp1).toMatch(IPv4_REGEX);
+    expect(validIp2).toMatch(IPv4_REGEX);
+    expect(invalidIp1).not.toMatch(IPv4_REGEX);
 });
 
 test('Properly recognizes valid IPv6 addresses', () => {
@@ -67,8 +67,8 @@ test('Recognizes defanged IOCs', () => {
     const validIp1 = '8.8.8(.)8';
     const validIp2 = '1.2.3[.]4';
 
-    expect(validIp1).toMatch(IP_REGEX);
-    expect(validIp2).toMatch(IP_REGEX);
+    expect(validIp1).toMatch(IPv4_REGEX);
+    expect(validIp2).toMatch(IPv4_REGEX);
 
     const domain1 = 'google(.)com';
     const domain2 = String.raw`facebook\.com`;

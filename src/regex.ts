@@ -3,13 +3,10 @@ const ipv4Octet = "(?:25[0-5]|" +  // 250-255
                   "(2[0-4]|1{0,1}[0-9]){0,1}[0-9])";  // 0-249
 const ipv6Octet = "[0-9a-fA-F]{1,4}"
 export const IP_REGEX = new RegExp(
-    String.raw`(?:%[0-9a-fA-F]{2})?(?![^\d]|^)(` +
-    ipv4Octet +
-    possiblyDefangedVal(String.raw`\.`) +
-    ipv4Octet +
-    possiblyDefangedVal(String.raw`\.`) +
-    ipv4Octet +
-    possiblyDefangedVal(String.raw`\.`) +
+    // match a possibly url-encoded character preceding, or
+    // a word boundary
+    String.raw`(?:%[0-9a-fA-F]{2})?(?=\b|^)(` +
+    `(?:${ipv4Octet + possiblyDefangedVal(String.raw`\.`)}){3}` +
     ipv4Octet +
     ")",
     "g"  // flags

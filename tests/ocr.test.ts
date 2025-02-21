@@ -9,10 +9,6 @@ describe('OCR functionality', () => {
     beforeAll(async () => {
         worker = await initializeWorker();
     });
-
-    afterAll(async () => {
-        await worker.terminate();
-    });
     
     let mockApp: App;
     let mockFile: TFile | null;
@@ -44,5 +40,9 @@ describe('OCR functionality', () => {
     it('should correctly recognize text from a sample image', async () => {
         const worker = await initializeWorker();
         await ocr(mockApp, mockFile, worker);
+    });
+
+    afterAll(async () => {
+        await worker.terminate();
     });
 })
