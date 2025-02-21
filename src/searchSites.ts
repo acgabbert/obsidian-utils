@@ -36,6 +36,7 @@ export interface SearchSite {
     hash: boolean
     domain: boolean
     multisearch: boolean
+    urlEncodeSearchTerm?: boolean
     separator?: string
     enabled: boolean
 }
