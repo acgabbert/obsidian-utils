@@ -15,9 +15,10 @@
   },
   "exports": {
     ".": {
+      "types": "./dist/index.d.ts",
       "import": "./dist/index.mjs",
       "require": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "default": "./dist/index.js"
     }
   },
   "repository": {
@@ -35,6 +36,7 @@
     "url": "https://github.com/acgabbert/obsidian-utils/issues"
   },
   "homepage": "https://github.com/acgabbert/obsidian-utils#readme",
+  "sideEffects": false,
   "dependencies": {
     "tesseract.js": "^4.1.1"
   },
