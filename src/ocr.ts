@@ -2,7 +2,7 @@ import { App, TFile } from "obsidian";
 import { createWorker, type Worker } from "tesseract.js";
 import { ParsedIndicators } from "./searchSites";
 
-export { EmptyOcrProvider, initializeWorker, ocr, ocrMultiple, OcrProvider, readImageFile, TesseractOcrProvider };
+export { EmptyOcrProvider, encodeImageFile, initializeWorker, ocr, ocrMultiple, OcrProvider, readImageFile, TesseractOcrProvider };
 
 interface OcrQueueItem {
     image: Buffer;
@@ -59,6 +59,11 @@ async function readImageFile(app: App, file: TFile | null): Promise<Buffer | nul
     const arrBuff = await app.vault.readBinary(file);
     const buffer = Buffer.from(arrBuff);
     return buffer;
+}
+
+async function encodeImageFile(app: App, file: TFile | null): Promise<string | null> {
+    if (!file) return null;
+    return Buffer.from((await app.vault.readBinary(file))).toString('base64');
 }
 
 async function ocr(app: App, file: TFile | null, worker: Worker | null): Promise<string | null> {
