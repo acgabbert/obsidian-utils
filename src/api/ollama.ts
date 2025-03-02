@@ -1,5 +1,13 @@
 import { request, RequestUrlParam } from "obsidian";
 
+export { 
+    OllamaClient,
+    OllamaChatCompletionRequest,
+    OllamaGenerationRequest,
+    OllamaChatCompletionResponse,
+    OllamaGenerationResponse
+}
+
 interface OllamaBaseRequest {
     model: string;
     stream?: boolean;
@@ -99,7 +107,8 @@ class OllamaClient {
         const requestBody: OllamaGenerationRequest = {
             model: this.model,
             prompt: prompt,
-            suffix: suffix
+            suffix: suffix,
+            stream: this.stream
         }
 
         return await this.generationRequest(requestBody);
@@ -115,7 +124,8 @@ class OllamaClient {
         const requestBody: OllamaGenerationRequest = {
             model: this.model,
             prompt: prompt,
-            images: images
+            images: images,
+            stream: this.stream
         }
 
         return await this.generationRequest(requestBody);
@@ -128,7 +138,8 @@ class OllamaClient {
     private async conversationRequest(): Promise<OllamaChatCompletionResponse> {
         const requestBody: OllamaChatCompletionRequest = {
             messages: this.messageHistory,
-            model: this.model
+            model: this.model,
+            stream: this.stream
         }
 
         try {

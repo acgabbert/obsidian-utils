@@ -5,6 +5,7 @@ export {
     createFolderIfNotExists,
     createNote,
     getAttachments,
+    getAttachmentFiles,
     getBacklinks,
     noteAppend,
     noteReplace,
@@ -118,6 +119,23 @@ function getAttachments(notePath: string, app: App): Array<string> {
         const file = app.vault.getAbstractFileByPath(link);
         if (file && file instanceof TFile && file.extension !== "md") {
             attachments.add(file.path);
+        }
+    });
+    return Array.from(attachments);
+}
+
+/**
+ * Get an array of linked file objects from a note.
+ * @param note the note to check for linked attachment files
+ * @param app the current App class instance
+ */
+function getAttachmentFiles(note: TFile, app: App): TFile[] {
+    const links = getBacklinks(note.path, app, true);
+    const attachments = new Set<TFile>();
+    links.forEach((link) => {
+        const file = app.vault.getAbstractFileByPath(link);
+        if (file && file instanceof TFile && file.extension !== "md") {
+            attachments.add(file);
         }
     });
     return Array.from(attachments);

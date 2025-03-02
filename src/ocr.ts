@@ -1,8 +1,8 @@
 import { App, TFile } from "obsidian";
 import { createWorker, type Worker } from "tesseract.js";
-import { ParsedIndicators } from "./searchSites";
+import { readImageFile } from "./ocr/utils";
 
-export { EmptyOcrProvider, encodeImageFile, initializeWorker, ocr, ocrMultiple, OcrProvider, readImageFile, TesseractOcrProvider };
+export { initializeWorker, ocr, ocrMultiple };
 
 interface OcrQueueItem {
     image: Buffer;
@@ -54,17 +54,6 @@ class OcrQueue {
     }    
 }
 
-async function readImageFile(app: App, file: TFile | null): Promise<Buffer | null> {
-    if (!file) return null;
-    const arrBuff = await app.vault.readBinary(file);
-    const buffer = Buffer.from(arrBuff);
-    return buffer;
-}
-
-async function encodeImageFile(app: App, file: TFile | null): Promise<string | null> {
-    if (!file) return null;
-    return Buffer.from((await app.vault.readBinary(file))).toString('base64');
-}
 
 async function ocr(app: App, file: TFile | null, worker: Worker | null): Promise<string | null> {
     if (!worker) {
@@ -72,6 +61,7 @@ async function ocr(app: App, file: TFile | null, worker: Worker | null): Promise
         return null;
     }
 
+    if (!file) return null;
     const buffer = await readImageFile(app, file);
     if (!buffer) return null;
     const ret = await worker.recognize(buffer);
@@ -123,98 +113,4 @@ async function ocrMultiple(app: App, files: TFile[] | string[] | null, worker: W
         }
     }
     return resultsMap;
-}
-
-/**
- * Interface for OCR providers that process files and extract indicators
- */
-interface OcrProvider {
-    /**
-     * Process a list of files and extract indicators from each
-     * @param app the Obsidian app isntance
-     * @param filePaths Array of file paths to process
-     * @returns Promis that resovles to a map of filePath to extracted indicators
-     */
-    processFiles(app: App, filePaths: string[]): Promise<Map<string, ParsedIndicators[]>>;
-
-    /**
-     * Check if the provider is ready to process files
-     * @returns boolean indicating if the provider is ready
-     */
-    isReady(): boolean;
-}
-
-class EmptyOcrProvider implements OcrProvider {
-    processFiles(app: App, filePaths: string[]): Promise<Map<string, ParsedIndicators[]>> {
-        return Promise.resolve(new Map());
-    }
-
-    isReady(): boolean {
-        return false;
-    }
-}
-
-/**
- * OCR provider implementation using Tesseract.js
- */
-class TesseractOcrProvider implements OcrProvider {
-    private worker: Worker | null;
-    private matchExtractor: (text: string) => Promise<ParsedIndicators[]>;
-
-    /**
-     * Creates a new TesseractOcrProvider
-     * @param worker a Tesseract.js worker
-     * @param matchExtractor a function that extracts matches from OCR text
-     */
-    constructor(
-        worker: Worker | null,
-        matchExtractor: (text: string) => Promise<ParsedIndicators[]>
-    ) {
-        this.worker = worker;
-        this.matchExtractor = matchExtractor;
-    }
-
-    /**
-     * Process a list of files and extract indicators from each
-     * @param app the Obsidian app instance
-     * @param filePaths Array of file paths to process
-     * @returns promise that resolves to a Map of filePath to extracted indicators
-     */
-    async processFiles(app: App, filePaths: string[]): Promise<Map<string, ParsedIndicators[]>> {
-        const resultsMap = new Map<string, ParsedIndicators[]>();
-
-        if (!this.isReady() || filePaths.length === 0) {
-            return resultsMap;
-        }
-
-        try {
-            const ocrResults = await ocrMultiple(app, filePaths, this.worker);
-            if (!ocrResults) return resultsMap;
-            
-            for (const [filename, ocrText] of ocrResults?.entries()) {
-                const indicators = await this.matchExtractor(ocrText);
-                resultsMap.set(filename, indicators);
-            }
-        } catch (e) {
-            console.error("Error during OCR processing:", e)
-        }
-        return resultsMap;
-    }
-
-    /**
-     * Check if the provider is ready to process files
-     * @returns boolean indicating if the provider is ready
-     */
-    isReady(): boolean {
-        return this.worker !== null;
-    }
-
-    /**
-     * Update the Tesseract worker
-     * @param worker the new Tesseract worker
-     */
-    updateWorker(worker: Worker): void {
-        if (this.worker) this.worker.terminate();
-        this.worker = worker;
-    }
 }
