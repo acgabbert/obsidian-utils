@@ -1,5 +1,13 @@
 import { request, RequestUrlParam } from "obsidian";
 
+export { 
+    OllamaClient,
+    OllamaChatCompletionRequest,
+    OllamaGenerationRequest,
+    OllamaChatCompletionResponse,
+    OllamaGenerationResponse
+}
+
 interface OllamaBaseRequest {
     model: string;
     stream?: boolean;

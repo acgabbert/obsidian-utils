@@ -1,6 +1,7 @@
 import { App, TFile } from "obsidian";
 import { createWorker, type Worker } from "tesseract.js";
 import { ParsedIndicators } from "./searchSites";
+import { OllamaClient } from "./api/ollama";
 
 export { EmptyOcrProvider, encodeImageFile, initializeWorker, ocr, ocrMultiple, OcrProvider, readImageFile, TesseractOcrProvider };
 
@@ -216,5 +217,95 @@ class TesseractOcrProvider implements OcrProvider {
     updateWorker(worker: Worker): void {
         if (this.worker) this.worker.terminate();
         this.worker = worker;
+    }
+}
+
+class OllamaOcrProvider implements OcrProvider {
+    private client: OllamaClient;
+    app: App;
+    private matchExtractor: (text: string) => Promise<ParsedIndicators[]>;
+    private ocrPrompt: string;
+
+    /**
+     * Creates a new OllamaOcrProvider
+     * @param worker a Tesseract.js worker
+     * @param matchExtractor a function that extracts matches from OCR text
+     */
+    constructor(
+        app: App,
+        client: OllamaClient,
+        matchExtractor: (text: string) => Promise<ParsedIndicators[]>
+    ) {
+        this.app = app;
+        this.client = client;
+        this.matchExtractor = matchExtractor;
+        this.ocrPrompt = "Extract all text from the image. Respond with only the extracted text."
+    }
+
+    /**
+     * Process a list of files and extract indicators from each
+     * @param app the Obsidian app instance
+     * @param files Array of TFile objects to process
+     * @returns promise that resolves to a Map of filePath to extracted indicators
+     */
+    async processFiles(files: TFile[]): Promise<Map<string, ParsedIndicators[]>> {
+        const resultsMap = new Map<string, ParsedIndicators[]>();
+
+        if (!this.isReady() || files.length === 0) {
+            return resultsMap;
+        }
+
+        try {
+            const ocrResults = await ocrMultiple(this.app, filePaths, this.worker);
+            if (!ocrResults) return resultsMap;
+            
+            for (const [filename, ocrText] of ocrResults?.entries()) {
+                const indicators = await this.matchExtractor(ocrText);
+                resultsMap.set(filename, indicators);
+            }
+        } catch (e) {
+            console.error("Error during OCR processing:", e)
+        }
+        return resultsMap;
+    }
+
+    /**
+     * Check if the provider is ready to process files
+     * @returns boolean indicating if the provider is ready
+     */
+    isReady(): boolean {
+        return this.client !== null;
+    }
+
+    /**
+     * Return extracted text from an image file.
+     * @param file a TFile object
+     * @returns the extracted text
+     */
+    async ocrImage(file: TFile): Promise<string> {
+        const encoded = await encodeImageFile(this.app, file);
+        if (!encoded) return "";
+        const message = await this.client.generateWithImages(this.ocrPrompt, [encoded]);
+        return message.response;
+    }
+
+    /**
+     * Return a map of 
+     */
+    async ocrMultiple(files: TFile[]): Promise<Map<string, string> | null> {
+        const resultsMap: Map<string, string> = new Map();
+        if (!this.isReady()) return resultsMap;
+
+        for (let file of files)
+
+        return resultsMap;
+    }
+
+    /**
+     * Set the OCR prompt.
+     * @param prompt prompt to be used for OCR
+     */
+    setOcrPrompt(prompt: string): void {
+        this.ocrPrompt = prompt;
     }
 }
