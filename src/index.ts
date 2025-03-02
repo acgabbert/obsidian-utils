@@ -13,3 +13,8 @@ export * from './workspaceUtils';
 export * from './api/virusTotal';
 export * from './api/openai';
 export * from './api/ollama';
+export * from './ocr/ollamaProvider';
+export * from './ocr/provider';
+export * from './ocr/tasks';
+export * from './ocr/tesseractProvider';
+export * from './ocr/utils';
