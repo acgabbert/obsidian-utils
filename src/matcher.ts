@@ -1,4 +1,8 @@
-import { DOMAIN_REGEX, FILE_REGEX, IP_REGEX, IPv6_REGEX, LOCAL_IP_REGEX, MACRO_REGEX, MD5_REGEX, SHA1_REGEX, SHA256_REGEX } from "./regex";
+import { Plugin } from "obsidian";
+import { DOMAIN_REGEX, FILE_REGEX, IP_REGEX, IPv4_REGEX, IPv6_REGEX, LOCAL_IP_REGEX, MACRO_REGEX, MD5_REGEX, SHA1_REGEX, SHA256_REGEX } from "./regex";
+import { ParsedIndicators, SearchSite } from "./searchSites";
+import { extractMatches, isLocalIpv4, refangIoc, removeArrayDuplicates, validateDomains } from "./textUtils";
+import { CyberPlugin } from "./cyberPlugin";
 
 export const PATTERN_KEYS = ['IPv6', 'IP', 'IPv4', 'LocalIP', 'Domain', 'SHA256', 'MD5', 'SHA1', 'File'];
 export type PatternKey = typeof PATTERN_KEYS[number];
@@ -42,4 +46,61 @@ export class Matcher {
         const match = text.match(Matcher.Patterns[pattern]);
         return match ? match[0] : null;
     }
+}
+
+
+/**
+ * Extract IOCs from the given file content.
+ * @param fileContent content from which to extract IOCs
+ * @returns an array of ParsedIndicators objects for each IOC type
+ */
+export async function getMatches(this: CyberPlugin, fileContent: string): Promise<ParsedIndicators[]> {
+    let retval = [];
+    const ips: ParsedIndicators = {
+        title: "IPs",
+        items: Matcher.findAll(fileContent, 'IPv4'),
+        sites: this.settings?.searchSites.filter((x: SearchSite) => x.enabled && x.ip)
+    }
+    const domains: ParsedIndicators = {
+        title: "Domains",
+        items: Matcher.findAll(fileContent, 'Domain'),
+        sites: this.settings?.searchSites.filter((x: SearchSite) => x.enabled && x.domain)
+    }
+    const hashes: ParsedIndicators = {
+        title: "Hashes",
+        items: Matcher.findAll(fileContent, 'SHA256'),
+        sites: this.settings?.searchSites.filter((x: SearchSite) => x.enabled && x.hash)
+    }
+    const privateIps: ParsedIndicators = {
+        title: "IPs (Private)",
+        items: [],
+        sites: this.settings?.searchSites.filter((x: SearchSite) => x.enabled && x.ip)
+    }
+    const ipv6: ParsedIndicators = {
+        title: "IPv6",
+        items: Matcher.findAll(fileContent, 'IPv6'),
+        sites: this.settings?.searchSites.filter((x: SearchSite) => x.enabled && x.ip)
+    }
+    if (this.validTld) 
+        domains.items = validateDomains(domains.items, this.validTld);
+    ips.title = "IPs (Public)";
+    for (let i = 0; i < ips.items.length; i++) {
+        const item = ips.items[i];
+        if(isLocalIpv4(item)) {
+            ips.items.splice(i, 1);
+            i--;
+            privateIps.items.push(item);
+        }
+    }
+    retval.push(ips);
+    retval.push(privateIps);
+    retval.push(domains);
+    retval.push(hashes);
+    retval.push(ipv6)
+    retval.forEach((iocList, index, array) => {
+        iocList.items = iocList.items.map((x) => refangIoc(x));
+        iocList.items = removeArrayDuplicates(iocList.items);
+        array[index] = iocList;
+    });
+    return retval;
 }

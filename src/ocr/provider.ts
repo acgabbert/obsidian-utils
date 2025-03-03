@@ -265,6 +265,7 @@ export class ParallelOcrProvider extends AbstractOcrProvider {
             currentTask.progress = 10;
             this.updateProgress(currentTask);
             
+            console.log(`processing task for file ${task.filePath}`);
             // Process OCR with cancellation support
             const text = await this.ocrProcessor(app, file, this.abortController.signal);
             
@@ -278,6 +279,7 @@ export class ParallelOcrProvider extends AbstractOcrProvider {
             // Update progress after OCR
             currentTask.progress = 70;
             currentTask.result = text;
+            console.log(text);
             this.updateProgress(currentTask);
             
             // Extract indicators

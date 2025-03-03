@@ -20,6 +20,7 @@ export class OllamaOcrProvider extends ParallelOcrProvider {
         maxConcurrent: number = 4
     ) {
         const ollamaOcrProcessor = async(app: App, file: TFile, signal: AbortSignal): Promise<string> => {
+            console.log("entering Ollama OCR Processor");
             if (signal.aborted) {
                 throw new Error('Operation cancelled');
             }
