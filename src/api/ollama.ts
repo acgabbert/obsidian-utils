@@ -98,9 +98,9 @@ class OllamaClient {
     }
 
     /**
-     * 
+     * Make a single generation request with a text prompt.
      * @param prompt prompt
-     * @param images an array of base64-encoded images
+     * @param suffix an optional suffix to the model's response
      * @returns an OllamaGenerationResponse object
      */
     async generate(prompt: string, suffix?: string): Promise<OllamaGenerationResponse> {
@@ -115,7 +115,7 @@ class OllamaClient {
     }
 
     /**
-     * 
+     * Make a single generation request with image(s).
      * @param prompt prompt
      * @param images an array of base64-encoded images
      * @returns an OllamaGenerationResponse object
@@ -128,7 +128,8 @@ class OllamaClient {
             stream: this.stream
         }
 
-        return await this.generationRequest(requestBody);
+        const resp = await this.generationRequest(requestBody);
+        return resp;
     }
     
     /**
