@@ -196,6 +196,7 @@ export class ParallelOcrProvider extends AbstractOcrProvider {
         
         // Start processing if not already running
         if (!this.processingPromise) {
+            console.log("processing the queue");
             this.processingPromise = this.processQueue(app);
         }
     }
@@ -214,26 +215,36 @@ export class ParallelOcrProvider extends AbstractOcrProvider {
      */
     private async processQueue(app: App): Promise<void> {
         try {
+            // keep processing until no pending tasks remain
             while (this.hasPendingTasks()) {
-                // If we're at max concurrency, wait for a slot to open
-                if (this.processingCount >= this.maxConcurrent) {
-                    await new Promise(resolve => setTimeout(resolve, 100));
-                    continue;
+                const pendingTasks: OcrTask[] = [];
+                const availableSlots = this.maxConcurrent - this.processingCount;
+
+                if (availableSlots > 0) {
+                    for (const task of this.tasks.values()) {
+                        if (task.status === 'pending') {
+                            pendingTasks.push(task);
+                            if (pendingTasks.length >= availableSlots) break;
+                        }
+                    }
+                    
+                    // Start processing collected tasks
+                    for (const task of pendingTasks) {
+                        this.processingCount++;
+                        task.status = 'processing';
+                        this.updateProgress(task);
+                        
+                        // process task asynchronously without awaiting
+                        this.processTask(app, task).finally(() => {
+                            this.processingCount--;
+                        });
+                    }
                 }
-                
-                // Find next pending task
-                const nextTask = this.getNextPendingTask();
-                if (!nextTask) continue;
-                
-                // Start processing this task
-                this.processingCount++;
-                nextTask.status = 'processing';
-                this.updateProgress(nextTask);
-                
-                // Process task asynchronously without awaiting
-                this.processTask(app, nextTask).finally(() => {
-                    this.processingCount--;
-                });
+
+                // if we couldn't start any new tasks, wait a bit before checking again
+                if (pendingTasks.length === 0) {
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                }
             }
             
             // Wait for all processing tasks to complete
