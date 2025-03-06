@@ -36,7 +36,8 @@ export class GeminiOcrProvider extends ParallelOcrProvider {
                     reject(new Error('Operation cancelled'));
                 };
                 signal.addEventListener('abort', abortHandler, { once: true });
-                setTimeout(() => signal.removeEventListener('abort', abortHandler), 0);
+                return () => signal.removeEventListener('abort', abortHandler);
+                // setTimeout(() => signal.removeEventListener('abort', abortHandler), 0);
             });
 
             console.log(`Gemini processor is processing file ${file.path}`)

@@ -36,7 +36,8 @@ export class OllamaOcrProvider extends ParallelOcrProvider {
                     reject(new Error('Operation cancelled'));
                 };
                 signal.addEventListener('abort', abortHandler, { once: true });
-                setTimeout(() => signal.removeEventListener('abort', abortHandler), 0);
+                return () => signal.removeEventListener('abort', abortHandler);
+                // setTimeout(() => signal.removeEventListener('abort', abortHandler), 0);
             });
 
             // Race the actual operation against a potential abort signal

@@ -43,6 +43,12 @@ export interface OcrProvider {
      * @returns Map of task IDs to task objects
      */
     getTasksStatus(): Map<string, OcrTask>;
+
+    /**
+     * Get the current progress callback
+     * @returns The current progress callback function or null if none is set
+     */
+    getProgressCallback(): ProgressCallback | null;
 }
 
 /**
@@ -69,6 +75,7 @@ export abstract class AbstractOcrProvider implements OcrProvider {
     cancel(): void {
         this.abortController.abort();
         this.abortController = new AbortController();
+        this.processingPromise = null;
         
         // Mark all processing tasks as cancelled
         for (const task of this.tasks.values()) {
@@ -76,6 +83,13 @@ export abstract class AbstractOcrProvider implements OcrProvider {
                 task.status = 'cancelled';
                 this.updateProgress(task);
             }
+        }
+
+        this.tasks.clear();
+
+        if (this.progressCallback) {
+            console.log("resetting stats in the provider")
+            this.progressCallback(0, 0, 0);
         }
     }
 
@@ -124,6 +138,14 @@ export abstract class AbstractOcrProvider implements OcrProvider {
         
         const overallProgress = totalTasks > 0 ? totalProgress / totalTasks : 0;
         this.progressCallback(overallProgress, completedTasks, totalTasks, task);
+    }
+
+    /**
+     * Get the current progress callback
+     * @returns The current progress callback function or null if none is set
+     */
+    getProgressCallback(): ProgressCallback | null {
+        return this.progressCallback || null;
     }
 }
 
@@ -340,6 +362,8 @@ export class ParallelOcrProvider extends AbstractOcrProvider {
  * Empty OCR provider that does nothing
  */
 export class EmptyOcrProvider implements OcrProvider {
+    private progressCallback: ProgressCallback | null = null;
+
     processFiles(app: App, filePaths: string[]): Promise<Map<string, ParsedIndicators[]>> {
         return Promise.resolve(new Map());
     }
@@ -353,7 +377,11 @@ export class EmptyOcrProvider implements OcrProvider {
     }
     
     setProgressCallback(callback: ProgressCallback): void {
-        // Do nothing
+        this.progressCallback = callback;
+    }
+
+    getProgressCallback(): ProgressCallback | null {
+        return this.progressCallback || null;
     }
     
     isReady(): boolean {

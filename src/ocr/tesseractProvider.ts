@@ -96,6 +96,18 @@ export class TesseractOcrProvider implements OcrProvider {
     }
 
     /**
+     * Get the current progress callback
+     * @returns The current progress callback function or null if none is set
+     */
+    getProgressCallback(): ProgressCallback | null {
+        if (this.delegateProvider) {
+            return this.delegateProvider.getProgressCallback();
+        } else {
+            return null;
+        }
+    }
+
+    /**
      * Check if provider is ready to process files
      * @returns boolean indicating if the provider is ready
      */
