@@ -43,6 +43,12 @@ export interface OcrProvider {
      * @returns Map of task IDs to task objects
      */
     getTasksStatus(): Map<string, OcrTask>;
+
+    /**
+     * Get the current progress callback
+     * @returns The current progress callback function or null if none is set
+     */
+    getProgressCallback(): ProgressCallback | null;
 }
 
 /**
@@ -69,6 +75,7 @@ export abstract class AbstractOcrProvider implements OcrProvider {
     cancel(): void {
         this.abortController.abort();
         this.abortController = new AbortController();
+        this.processingPromise = null;
         
         // Mark all processing tasks as cancelled
         for (const task of this.tasks.values()) {
@@ -76,6 +83,12 @@ export abstract class AbstractOcrProvider implements OcrProvider {
                 task.status = 'cancelled';
                 this.updateProgress(task);
             }
+        }
+
+        this.tasks.clear();
+
+        if (this.progressCallback) {
+            this.progressCallback(0, 0, 0);
         }
     }
 
@@ -124,6 +137,14 @@ export abstract class AbstractOcrProvider implements OcrProvider {
         
         const overallProgress = totalTasks > 0 ? totalProgress / totalTasks : 0;
         this.progressCallback(overallProgress, completedTasks, totalTasks, task);
+    }
+
+    /**
+     * Get the current progress callback
+     * @returns The current progress callback function or null if none is set
+     */
+    getProgressCallback(): ProgressCallback | null {
+        return this.progressCallback || null;
     }
 }
 
@@ -214,26 +235,36 @@ export class ParallelOcrProvider extends AbstractOcrProvider {
      */
     private async processQueue(app: App): Promise<void> {
         try {
+            // keep processing until no pending tasks remain
             while (this.hasPendingTasks()) {
-                // If we're at max concurrency, wait for a slot to open
-                if (this.processingCount >= this.maxConcurrent) {
-                    await new Promise(resolve => setTimeout(resolve, 100));
-                    continue;
+                const pendingTasks: OcrTask[] = [];
+                const availableSlots = this.maxConcurrent - this.processingCount;
+
+                if (availableSlots > 0) {
+                    for (const task of this.tasks.values()) {
+                        if (task.status === 'pending') {
+                            pendingTasks.push(task);
+                            if (pendingTasks.length >= availableSlots) break;
+                        }
+                    }
+                    
+                    // Start processing collected tasks
+                    for (const task of pendingTasks) {
+                        this.processingCount++;
+                        task.status = 'processing';
+                        this.updateProgress(task);
+                        
+                        // process task asynchronously without awaiting
+                        this.processTask(app, task).finally(() => {
+                            this.processingCount--;
+                        });
+                    }
                 }
-                
-                // Find next pending task
-                const nextTask = this.getNextPendingTask();
-                if (!nextTask) continue;
-                
-                // Start processing this task
-                this.processingCount++;
-                nextTask.status = 'processing';
-                this.updateProgress(nextTask);
-                
-                // Process task asynchronously without awaiting
-                this.processTask(app, nextTask).finally(() => {
-                    this.processingCount--;
-                });
+
+                // if we couldn't start any new tasks, wait a bit before checking again
+                if (pendingTasks.length === 0) {
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                }
             }
             
             // Wait for all processing tasks to complete
@@ -327,6 +358,8 @@ export class ParallelOcrProvider extends AbstractOcrProvider {
  * Empty OCR provider that does nothing
  */
 export class EmptyOcrProvider implements OcrProvider {
+    private progressCallback: ProgressCallback | null = null;
+
     processFiles(app: App, filePaths: string[]): Promise<Map<string, ParsedIndicators[]>> {
         return Promise.resolve(new Map());
     }
@@ -340,7 +373,11 @@ export class EmptyOcrProvider implements OcrProvider {
     }
     
     setProgressCallback(callback: ProgressCallback): void {
-        // Do nothing
+        this.progressCallback = callback;
+    }
+
+    getProgressCallback(): ProgressCallback | null {
+        return this.progressCallback || null;
     }
     
     isReady(): boolean {

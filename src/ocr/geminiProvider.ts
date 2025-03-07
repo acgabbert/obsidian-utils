@@ -1,11 +1,12 @@
-import { App, Plugin, TFile } from "obsidian";
-import { OllamaClient } from "../api/ollama"
+import { App, TFile } from "obsidian";
 import { ParsedIndicators } from "../searchSites";
 import { ParallelOcrProvider } from "./provider"
-import { encodeImageFile, readImageFile } from "./utils";
+import { encodeImageFile } from "./utils";
+import { GeminiClient } from "../api/gemini";
+import { CyberPlugin } from "../cyberPlugin";
 
-export class OllamaOcrProvider extends ParallelOcrProvider {
-    private client: OllamaClient;
+export class GeminiOcrProvider extends ParallelOcrProvider {
+    private client: GeminiClient;
     private initialized: boolean = false;
 
     /**
@@ -15,11 +16,11 @@ export class OllamaOcrProvider extends ParallelOcrProvider {
      * @param maxConcurrent maximum number of concurrent OCR operations
      */
     constructor(
-        client: OllamaClient,
+        client: GeminiClient,
         matchExtractor: (text: string) => Promise<ParsedIndicators[]>,
         maxConcurrent: number = 4
     ) {
-        const ollamaOcrProcessor = async(app: App, file: TFile, signal: AbortSignal): Promise<string> => {
+        const geminiOcrProcessor = async(app: App, file: TFile, signal: AbortSignal): Promise<string> => {
             if (signal.aborted) {
                 throw new Error('Operation cancelled');
             }
@@ -41,15 +42,15 @@ export class OllamaOcrProvider extends ParallelOcrProvider {
 
             // Race the actual operation against a potential abort signal
             return Promise.race([
-                client.generateWithImages(
+                client.imageRequest(
                     "Extract all text from the image. Respond with only the extracted text.",
                     [buffer]    
-                ).then(response => response.response || ""),
+                ).then(response => response || ""),
                 abortPromise
             ])
         }
 
-        super(ollamaOcrProcessor, matchExtractor, maxConcurrent);
+        super(geminiOcrProcessor, matchExtractor, maxConcurrent);
 
         this.client = client;
         this.initialized = true;

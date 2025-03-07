@@ -1,7 +1,7 @@
 import { App, Plugin, PluginManifest, WorkspaceLeaf } from "obsidian";
 import { EventEmitter } from "events";
 
-import { SearchSite } from "./searchSites";
+import { IndicatorExclusion, SearchSite } from "./searchSites";
 import { Matcher } from "./matcher";
 
 export interface CyberPluginSettings {
@@ -9,15 +9,29 @@ export interface CyberPluginSettings {
 	searchSites: SearchSite[];
 }
 
+export interface IndicatorExclusions {
+	ipv4Exclusions: IndicatorExclusion[];
+	ipv6Exclusions: IndicatorExclusion[];
+	hashExclusions: IndicatorExclusion[];
+	domainExclusions: IndicatorExclusion[];
+}
+
 export class CyberPlugin extends Plugin {
 	settings: CyberPluginSettings | undefined;
 	validTld: string[] | null | undefined;
 	sidebarContainers: Map<string, WorkspaceLeaf> | undefined;
 	protected emitter: EventEmitter;
+	exclusions: IndicatorExclusions | undefined;
 
 	constructor(app: App, manifest: PluginManifest) {
 		super(app, manifest);
 		this.emitter = new EventEmitter();
+		this.exclusions = {
+			ipv4Exclusions: [],
+			ipv6Exclusions: [],
+			hashExclusions: [],
+			domainExclusions: []
+		}
 	}
 
 	async activateView(type: string): Promise<void> {
