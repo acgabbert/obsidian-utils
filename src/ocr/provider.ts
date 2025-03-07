@@ -88,7 +88,6 @@ export abstract class AbstractOcrProvider implements OcrProvider {
         this.tasks.clear();
 
         if (this.progressCallback) {
-            console.log("resetting stats in the provider")
             this.progressCallback(0, 0, 0);
         }
     }
@@ -218,7 +217,6 @@ export class ParallelOcrProvider extends AbstractOcrProvider {
         
         // Start processing if not already running
         if (!this.processingPromise) {
-            console.log("processing the queue");
             this.processingPromise = this.processQueue(app);
         }
     }
@@ -298,7 +296,6 @@ export class ParallelOcrProvider extends AbstractOcrProvider {
             currentTask.progress = 10;
             this.updateProgress(currentTask);
             
-            console.log(`processing task for file ${task.filePath}`);
             // Process OCR with cancellation support
             const text = await this.ocrProcessor(app, file, this.abortController.signal);
             
@@ -312,7 +309,6 @@ export class ParallelOcrProvider extends AbstractOcrProvider {
             // Update progress after OCR
             currentTask.progress = 70;
             currentTask.result = text;
-            console.log(text);
             this.updateProgress(currentTask);
             
             // Extract indicators

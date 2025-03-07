@@ -1,6 +1,6 @@
 import { Plugin } from "obsidian";
 import { DOMAIN_REGEX, FILE_REGEX, IP_REGEX, IPv4_REGEX, IPv6_REGEX, LOCAL_IP_REGEX, MACRO_REGEX, MD5_REGEX, SHA1_REGEX, SHA256_REGEX } from "./regex";
-import { ParsedIndicators, SearchSite } from "./searchSites";
+import { filterExclusions, IndicatorExclusion, ParsedIndicators, SearchSite } from "./searchSites";
 import { extractMatches, isLocalIpv4, refangIoc, removeArrayDuplicates, validateDomains } from "./textUtils";
 import { CyberPlugin } from "./cyberPlugin";
 
@@ -103,4 +103,45 @@ export async function getMatches(this: CyberPlugin, fileContent: string): Promis
         array[index] = iocList;
     });
     return retval;
+}
+
+/**
+ * Process exclusions for a list of IOCs.
+ * @param plugin a CyberPlugin
+ * @param indicators a list of parsed indicators
+ * @returns indicators with exclusions applied
+ */
+export function processExclusions(iocs: ParsedIndicators[], plugin: CyberPlugin | undefined): ParsedIndicators[] {
+    if (!iocs || !plugin) return iocs;
+    
+    return iocs.map(indicatorList => {
+        // create a copy to avoid modifying the original
+        const processed = { ...indicatorList };
+        
+        switch(processed.title) {
+            case "IPs":
+            case "IPs (Public)":
+            case "IPs (Private)":
+                processed.exclusions = plugin.exclusions?.ipv4Exclusions || [];
+                break;
+            case "IPv6":
+                processed.exclusions = plugin.exclusions?.ipv6Exclusions || [];
+                break;
+            case "Domains":
+                processed.exclusions = plugin.exclusions?.domainExclusions || [];
+                break;
+            case "Hashes":
+                processed.exclusions = plugin.exclusions?.hashExclusions || [];
+                break;
+            default:
+                processed.exclusions = [];
+                break;
+        }
+
+        if (processed.exclusions && processed.exclusions.length > 0) {
+            processed.items = filterExclusions(processed.items, processed.exclusions);
+        }
+
+        return processed;
+    });
 }

@@ -62,7 +62,6 @@ export class GeminiClient {
             ]);
             const body = JSON.stringify(requestBody);
             const url = this.baseUrl + `/models/${this.model}:generateContent?${params.toString()}`;
-            console.log(url);
             const requestParams = {
                 url: url,
                 headers: {"Content-Type": "application/json"},
@@ -71,7 +70,6 @@ export class GeminiClient {
                 throw: true
             } as RequestUrlParam;
 
-            console.log(body);
             const response = JSON.parse(await request(requestParams)) as GeminiResponse;
             const part = response.candidates[0].content.parts[0];
             return part.text ?? "Model did not return a text response.";

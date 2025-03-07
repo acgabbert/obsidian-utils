@@ -3,6 +3,7 @@ import { ParsedIndicators } from "../searchSites";
 import { ParallelOcrProvider } from "./provider"
 import { encodeImageFile } from "./utils";
 import { GeminiClient } from "../api/gemini";
+import { CyberPlugin } from "../cyberPlugin";
 
 export class GeminiOcrProvider extends ParallelOcrProvider {
     private client: GeminiClient;
@@ -20,7 +21,6 @@ export class GeminiOcrProvider extends ParallelOcrProvider {
         maxConcurrent: number = 4
     ) {
         const geminiOcrProcessor = async(app: App, file: TFile, signal: AbortSignal): Promise<string> => {
-            console.log("entering Gemini OCR Processor");
             if (signal.aborted) {
                 throw new Error('Operation cancelled');
             }
@@ -40,7 +40,6 @@ export class GeminiOcrProvider extends ParallelOcrProvider {
                 // setTimeout(() => signal.removeEventListener('abort', abortHandler), 0);
             });
 
-            console.log(`Gemini processor is processing file ${file.path}`)
             // Race the actual operation against a potential abort signal
             return Promise.race([
                 client.imageRequest(
