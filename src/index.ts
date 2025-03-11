@@ -14,6 +14,7 @@ export * from './api/virusTotal';
 export * from './api/gemini';
 export * from './api/openai';
 export * from './api/ollama';
+export * from './ocr/compositeProvider';
 export * from './ocr/geminiProvider';
 export * from './ocr/ollamaProvider';
 export * from './ocr/provider';
