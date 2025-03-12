@@ -3,7 +3,6 @@ import { ParsedIndicators } from "../searchSites";
 import { ParallelOcrProvider } from "./provider"
 import { encodeImageFile } from "./utils";
 import { GeminiClient } from "../api/gemini";
-import { CyberPlugin } from "../cyberPlugin";
 
 export class GeminiOcrProvider extends ParallelOcrProvider {
     private client: GeminiClient;
@@ -30,6 +29,8 @@ export class GeminiOcrProvider extends ParallelOcrProvider {
                 throw new Error(`Failed to read file: ${file.path}`);
             }
 
+            console.log(`analyzing ${file.path} with gemini`)
+
             // Set up a listener for the abort event
             const abortPromise = new Promise<never>((_, reject) => {
                 const abortHandler = () => {
@@ -37,7 +38,6 @@ export class GeminiOcrProvider extends ParallelOcrProvider {
                 };
                 signal.addEventListener('abort', abortHandler, { once: true });
                 return () => signal.removeEventListener('abort', abortHandler);
-                // setTimeout(() => signal.removeEventListener('abort', abortHandler), 0);
             });
 
             // Race the actual operation against a potential abort signal
@@ -45,7 +45,7 @@ export class GeminiOcrProvider extends ParallelOcrProvider {
                 client.imageRequest(
                     "Extract all text from the image. Respond with only the extracted text.",
                     [buffer]    
-                ).then(response => response || ""),
+                ).then(response => {console.log(file.path, response); return response || ""}),
                 abortPromise
             ])
         }

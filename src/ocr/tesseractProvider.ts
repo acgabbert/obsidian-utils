@@ -39,6 +39,7 @@ export class TesseractOcrProvider implements OcrProvider {
                 }
                 
                 const result = await this.worker!.recognize(buffer);
+                console.log(result.data.text);
                 return result.data.text;
             };
             
@@ -152,6 +153,7 @@ export class TesseractOcrProvider implements OcrProvider {
                 }
                 
                 const result = await this.worker!.recognize(buffer);
+                console.log(result.data.text);
                 return result.data.text;
             };
             

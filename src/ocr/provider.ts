@@ -1,6 +1,7 @@
 import { App, Plugin, TFile } from "obsidian";
 import { OcrTask, ProgressCallback } from "./tasks";
 import { ParsedIndicators } from "../searchSites";
+import { EventEmitter } from "stream";
 
 /**
  * Interface for OCR providers that process files and extract indicators
@@ -60,6 +61,7 @@ export abstract class AbstractOcrProvider implements OcrProvider {
     protected processingPromise: Promise<void> | null = null;
     protected progressCallback?: ProgressCallback;
     protected matchExtractor: (text: string) => Promise<ParsedIndicators[]>;
+    protected emitter: EventEmitter = new EventEmitter();
 
     constructor(matchExtractor: (text: string) => Promise<ParsedIndicators[]>) {
         this.matchExtractor = matchExtractor;
@@ -145,6 +147,24 @@ export abstract class AbstractOcrProvider implements OcrProvider {
      */
     getProgressCallback(): ProgressCallback | null {
         return this.progressCallback || null;
+    }
+
+    /**
+     * Subscribe to result events
+     * @param event Event name ('result' for new results)
+     * @param listener Callback function
+     */
+    on(event: string, listener: (...args: any[]) => void): void {
+        this.emitter.on(event, listener);
+    }
+
+    /**
+     * Unsubscribe from result events
+     * @param event Event name
+     * @param listener Callback function
+     */
+    off(event: string, listener: (...args: any[]) => void): void {
+        this.emitter.off(event, listener);
     }
 }
 

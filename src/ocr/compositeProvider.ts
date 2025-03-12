@@ -1,5 +1,6 @@
 import { App } from "obsidian";
-import { OcrProvider } from "./provider";
+import { EventEmitter } from "events";
+import { OcrProvider, ParallelOcrProvider } from "./provider";
 import { OcrTask, ProgressCallback } from "./tasks";
 import { ParsedIndicators } from "../searchSites";
 
@@ -7,10 +8,16 @@ import { ParsedIndicators } from "../searchSites";
  * A composite OCR provider that delegates OCR processing to multiple providers.
  * Results from all providers are combined transparently.
  */
-export class CompositeOcrProvider implements OcrProvider {
+/**
+ * Callback type for incremental results updates
+ */
+export type ResultsCallback = (filePath: string, indicators: ParsedIndicators[], providerId: string) => void;
+
+export class CompositeOcrProvider extends ParallelOcrProvider {
     private providers: Map<string, OcrProvider> = new Map();
-    private progressCallback: ProgressCallback | null = null;
+    private resultsCallback: ResultsCallback | null = null;
     private aggregatedProgress: Map<string, { completed: number, total: number }> = new Map();
+    private processing: boolean = false;
     
     /**
      * Add an OCR provider to the composite
@@ -68,7 +75,8 @@ export class CompositeOcrProvider implements OcrProvider {
     }
     
     /**
-     * Process files with all active providers and combine results
+     * Process files with all active providers and combine results.
+     * Results are reported incrementally through the resultsCallback and 'result' event.
      * @param app the Obsidian app instance
      * @param filePaths Array of file paths to process
      * @returns Promise that resolves to a map of filePath to extracted indicators from all providers
@@ -81,43 +89,122 @@ export class CompositeOcrProvider implements OcrProvider {
             return new Map();
         }
         
-        // Process files with all providers in parallel
-        const providerResults = new Map<string, Promise<Map<string, ParsedIndicators[]>>>();
+        this.processing = true;
         
-        for (const [id, provider] of this.providers.entries()) {
-            if (provider.isReady()) {
-                providerResults.set(id, provider.processFiles(app, filePaths));
-                this.aggregatedProgress.set(id, { completed: 0, total: filePaths.length });
-            }
-        }
-        
-        // Combine results from all providers as they complete
+        // Initialize combined results map
         const combinedResults = new Map<string, ParsedIndicators[]>();
-        
-        // Wait for all providers to complete and process results
-        const providerIds = Array.from(providerResults.keys());
-        for (const id of providerIds) {
-            try {
-                console.log(`analyzing ${id}`)
-                const results = await providerResults.get(id)!;
-                
-                for (const [filePath, indicators] of results.entries()) {
-                    if (!combinedResults.has(filePath)) {
-                        combinedResults.set(filePath, []);
-                    }
-                    
-                    // Add indicators from this provider to the combined results
-                    combinedResults.get(filePath)!.push(...indicators);
-                }
-            } catch (error) {
-                console.error(`Error processing files with provider ${id}:`, error);
-                // Update progress to indicate failure
-                this.aggregatedProgress.set(id, { completed: 0, total: filePaths.length });
-                this.updateOverallProgress();
-            }
+        for (const filePath of filePaths) {
+            combinedResults.set(filePath, []);
         }
         
-        return combinedResults;
+        try {
+            // Process files with all providers in parallel and collect promises
+            const providerPromises: Promise<void>[] = [];
+            
+            for (const [id, provider] of this.providers.entries()) {
+                if (provider.isReady()) {
+                    // Create a proxy for tracking incremental results for this provider
+                    this.createProviderProxy(id, provider, app, filePaths, combinedResults);
+                    this.aggregatedProgress.set(id, { completed: 0, total: filePaths.length });
+                }
+            }
+            
+            // Wait for all proxied processing to complete
+            await Promise.all(providerPromises);
+            
+            return combinedResults;
+        } finally {
+            this.processing = false;
+        }
+    }
+    
+    /**
+     * Creates a proxy for a provider to track and report its results incrementally
+     */
+    private createProviderProxy(
+        providerId: string,
+        provider: OcrProvider,
+        app: App,
+        filePaths: string[],
+        combinedResults: Map<string, ParsedIndicators[]>
+    ): void {
+        // Set up result tracking for this provider
+        const originalCallback = provider.getProgressCallback();
+        
+        // Create task tracker for this provider
+        const tasksMap = new Map<string, OcrTask>();
+        
+        // Create a task completion observer
+        const taskObserver = (task?: OcrTask) => {
+            if (!task || task.status !== 'completed' || !task.indicators) {
+                return;
+            }
+            
+            // Store the task by ID for tracking
+            tasksMap.set(task.id, task);
+            
+            // Report the new results
+            const filePath = task.filePath;
+            const indicators = task.indicators;
+            
+            // Add to combined results
+            if (combinedResults.has(filePath)) {
+                combinedResults.get(filePath)!.push(...indicators);
+            } else {
+                combinedResults.set(filePath, [...indicators]);
+            }
+            
+            // Emit event and call callback
+            this.emitter.emit('result', filePath, indicators, providerId);
+            if (this.resultsCallback) {
+                this.resultsCallback(filePath, indicators, providerId);
+            }
+        };
+        
+        // Set up a progress callback wrapper to catch completed tasks
+        const progressWrapper: ProgressCallback = (
+            overallProgress, completedTasks, totalTasks, currentTask
+        ) => {
+            // Update aggregated progress
+            this.aggregatedProgress.set(providerId, { completed: completedTasks, total: totalTasks });
+            this.updateOverallProgress(currentTask);
+            
+            // Check for completed tasks
+            if (currentTask && currentTask.status === 'completed' && currentTask.indicators) {
+                taskObserver(currentTask);
+            }
+            
+            // Call original callback if it exists
+            if (originalCallback) {
+                originalCallback(overallProgress, completedTasks, totalTasks, currentTask);
+            }
+        };
+        
+        // Apply the wrapped callback
+        provider.setProgressCallback(progressWrapper);
+        
+        // Start processing with the provider
+        provider.addFiles(app, filePaths);
+        
+        // Also set up a task status checker to periodically check for completed tasks
+        // This ensures we catch results even if the progress callback misses them
+        const checkInterval = setInterval(() => {
+            if (!this.processing) {
+                clearInterval(checkInterval);
+                return;
+            }
+            
+            const tasks = provider.getTasksStatus();
+            for (const [taskId, task] of tasks.entries()) {
+                if (
+                    task.status === 'completed' && 
+                    task.indicators && 
+                    !tasksMap.has(taskId)
+                ) {
+                    taskObserver(task);
+                }
+            }
+        }, 100);
     }
     
     /**
@@ -126,9 +213,18 @@ export class CompositeOcrProvider implements OcrProvider {
      * @param filePaths Array of file paths to add
      */
     addFiles(app: App, filePaths: string[]): void {
+        // Initialize combined results map for these files
+        const combinedResults = new Map<string, ParsedIndicators[]>();
+        for (const filePath of filePaths) {
+            combinedResults.set(filePath, []);
+        }
+        
+        this.processing = true;
+        
         for (const [id, provider] of this.providers.entries()) {
             if (provider.isReady()) {
-                provider.addFiles(app, filePaths);
+                // Create proxy for this provider to track results
+                this.createProviderProxy(id, provider, app, filePaths, combinedResults);
                 
                 // Update progress tracking for this provider
                 this.aggregatedProgress.set(id, { 
@@ -170,7 +266,41 @@ export class CompositeOcrProvider implements OcrProvider {
      * @returns The current progress callback function or null if none is set
      */
     getProgressCallback(): ProgressCallback | null {
-        return this.progressCallback;
+        return this.progressCallback ?? null;
+    }
+    
+    /**
+     * Set a callback for incremental results reporting
+     * @param callback Function to call when new results are available
+     */
+    setResultsCallback(callback: ResultsCallback): void {
+        this.resultsCallback = callback;
+    }
+    
+    /**
+     * Check if processing is currently in progress
+     * @returns boolean indicating if processing is active
+     */
+    isProcessing(): boolean {
+        return this.processing;
+    }
+    
+    /**
+     * Subscribe to result events
+     * @param event Event name ('result' for new results)
+     * @param listener Callback function
+     */
+    on(event: string, listener: (...args: any[]) => void): void {
+        this.emitter.on(event, listener);
+    }
+    
+    /**
+     * Unsubscribe from result events
+     * @param event Event name
+     * @param listener Callback function
+     */
+    off(event: string, listener: (...args: any[]) => void): void {
+        this.emitter.off(event, listener);
     }
     
     /**
