@@ -4,6 +4,16 @@ import { ParsedIndicators } from "../searchSites";
 import { EventEmitter } from "stream";
 
 /**
+ * Standard event types for OCR providers
+ */
+export type OcrProviderEvent = 
+  | 'result'    // Emitted when results for a file are available
+  | 'progress'  // Emitted when progress updates
+  | 'taskUpdate' // Emitted when a task's status changes
+  | 'error'     // Emitted when an error occurs
+  | 'complete';  // Emitted when all processing is complete
+
+/**
  * Interface for OCR providers that process files and extract indicators
  */
 export interface OcrProvider {
@@ -28,12 +38,6 @@ export interface OcrProvider {
     cancel(): void;
 
     /**
-     * Set a callback for progress reporting
-     * @param callback Function to call with progress updates
-     */
-    setProgressCallback(callback: ProgressCallback): void;
-
-    /**
      * Check if the provider is ready to process files
      * @returns boolean indicating if the provider is ready
      */
@@ -46,10 +50,18 @@ export interface OcrProvider {
     getTasksStatus(): Map<string, OcrTask>;
 
     /**
-     * Get the current progress callback
-     * @returns The current progress callback function or null if none is set
+     * Subscribe to result events
+     * @param event Event name ('result' for new results)
+     * @param listener Callback function
      */
-    getProgressCallback(): ProgressCallback | null;
+    on(event: OcrProviderEvent, listener: (...args: any[]) => void): void;
+
+    /**
+     * Unsubscribe from result events
+     * @param event Event name
+     * @param listener Callback function
+     */
+    off(event: OcrProviderEvent, listener: (...args: any[]) => void): void;
 }
 
 /**
@@ -83,23 +95,13 @@ export abstract class AbstractOcrProvider implements OcrProvider {
         for (const task of this.tasks.values()) {
             if (task.status === 'processing' || task.status === 'pending') {
                 task.status = 'cancelled';
-                this.updateProgress(task);
+                this.emitTaskUpdate(task);
             }
         }
 
         this.tasks.clear();
 
-        if (this.progressCallback) {
-            this.progressCallback(0, 0, 0);
-        }
-    }
-
-    /**
-     * Set a callback for progress reporting
-     * @param callback Function to call with progress updates
-     */
-    setProgressCallback(callback: ProgressCallback): void {
-        this.progressCallback = callback;
+        this.emitProgress(0, 0, 0)
     }
 
     /**
@@ -117,36 +119,64 @@ export abstract class AbstractOcrProvider implements OcrProvider {
     protected generateTaskId(): string {
         return Date.now().toString(36) + Math.random().toString(36).substring(2, 5);
     }
-
+    
     /**
-     * Update the progress of a task and trigger progress callback
-     * @param task The task to update progress for
+     * Emit a progress event
      */
-    protected updateProgress(task: OcrTask): void {
-        if (!this.progressCallback) return;
-        
-        // Calculate overall progress
+    protected emitProgress(overallProgress: number, completedTasks: number, totalTasks: number, task?: OcrTask): void {
+        this.emitter.emit('progress', overallProgress, completedTasks, totalTasks, task);
+    }
+    
+    /**
+     * Emit a result event
+     */
+    protected emitResult(filePath: string, indicators: ParsedIndicators[]): void {
+        this.emitter.emit('result', filePath, indicators);
+    }
+    
+    /**
+     * Emit a task update event
+     */
+    protected emitTaskUpdate(task: OcrTask): void {
+        this.emitter.emit('taskUpdate', task);
+    }
+    
+    /**
+     * Emit an error event
+     */
+    protected emitError(error: Error, task?: OcrTask): void {
+        this.emitter.emit('error', error, task);
+    }
+    
+    /**
+     * Emit a complete event
+     */
+    protected emitComplete(): void {
+        this.emitter.emit('complete');
+    }
+    
+    /**
+     * Calculate overall progress
+     */
+    protected calculateOverallProgress(): number {
         let totalProgress = 0;
-        let completedTasks = 0;
-        const totalTasks = this.tasks.size;
-        
-        for (const t of this.tasks.values()) {
-            totalProgress += t.progress;
-            if (t.status === 'completed' || t.status === 'failed' || t.status === 'cancelled') {
-                completedTasks++;
+        for (const task of this.tasks.values()) {
+            totalProgress += task.progress;
+        }
+        return this.tasks.size > 0 ? totalProgress / this.tasks.size : 0;
+    }
+    
+    /**
+     * Get count of completed tasks
+     */
+    protected getCompletedCount(): number {
+        let count = 0;
+        for (const task of this.tasks.values()) {
+            if (task.status === 'completed' || task.status === 'failed' || task.status === 'cancelled') {
+                count++;
             }
         }
-        
-        const overallProgress = totalTasks > 0 ? totalProgress / totalTasks : 0;
-        this.progressCallback(overallProgress, completedTasks, totalTasks, task);
-    }
-
-    /**
-     * Get the current progress callback
-     * @returns The current progress callback function or null if none is set
-     */
-    getProgressCallback(): ProgressCallback | null {
-        return this.progressCallback || null;
+        return count;
     }
 
     /**
@@ -154,7 +184,7 @@ export abstract class AbstractOcrProvider implements OcrProvider {
      * @param event Event name ('result' for new results)
      * @param listener Callback function
      */
-    on(event: string, listener: (...args: any[]) => void): void {
+    on(event: OcrProviderEvent, listener: (...args: any[]) => void): void {
         this.emitter.on(event, listener);
     }
 
@@ -163,7 +193,7 @@ export abstract class AbstractOcrProvider implements OcrProvider {
      * @param event Event name
      * @param listener Callback function
      */
-    off(event: string, listener: (...args: any[]) => void): void {
+    off(event: OcrProviderEvent, listener: (...args: any[]) => void): void {
         this.emitter.off(event, listener);
     }
 }
@@ -201,11 +231,16 @@ export class ParallelOcrProvider extends AbstractOcrProvider {
     async processFiles(app: App, filePaths: string[]): Promise<Map<string, ParsedIndicators[]>> {
         // Add files to the queue
         this.addFiles(app, filePaths);
-        
-        // Wait for processing to complete
-        if (this.processingPromise) {
-            await this.processingPromise;
-        }
+
+        const completionPromise = new Promise<void>((resolve) => {
+            const completeHandler = () => {
+                this.emitter.off('complete', completeHandler);
+                resolve();
+            };
+            this.emitter.once('complete', completeHandler);
+        })
+
+        await completionPromise;
         
         // Collect results
         const results = new Map<string, ParsedIndicators[]>();
@@ -219,21 +254,39 @@ export class ParallelOcrProvider extends AbstractOcrProvider {
     }
 
     /**
-     * Add files to the processing queue
+     * Add files to the processing queue with deduplication
      * @param app the Obsidian app instance
      * @param filePaths Array of file paths to add
      */
     addFiles(app: App, filePaths: string[]): void {
+        // Create a set of all file paths that already have tasks
+        const existingFilePaths = new Set(
+            Array.from(this.tasks.values())
+                .map(task => task.filePath)
+        );
+
+        // Filter out files already in the queue
+        const newFilePaths = filePaths.filter(filePath => !existingFilePaths.has(filePath));
+
+        // If no new files, don't do anything
+        if (newFilePaths.length === 0) return;
+
         // Add files to tasks
         for (const filePath of filePaths) {
             const taskId = this.generateTaskId();
-            this.tasks.set(taskId, {
+            const task: OcrTask = {
                 id: taskId,
                 filePath,
                 status: 'pending',
                 progress: 0
-            });
+            }
+            this.tasks.set(taskId, task);
+
+            this.emitTaskUpdate(task);
         }
+
+        // Emit initial progress
+        this.emitProgress(0, 0, this.tasks.size);
         
         // Start processing if not already running
         if (!this.processingPromise) {
@@ -272,7 +325,7 @@ export class ParallelOcrProvider extends AbstractOcrProvider {
                     for (const task of pendingTasks) {
                         this.processingCount++;
                         task.status = 'processing';
-                        this.updateProgress(task);
+                        this.emitTaskUpdate(task);
                         
                         // process task asynchronously without awaiting
                         this.processTask(app, task).finally(() => {
@@ -291,6 +344,8 @@ export class ParallelOcrProvider extends AbstractOcrProvider {
             while (this.processingCount > 0) {
                 await new Promise(resolve => setTimeout(resolve, 100));
             }
+
+            this.emitComplete();
         } finally {
             this.processingPromise = null;
         }
@@ -314,7 +369,13 @@ export class ParallelOcrProvider extends AbstractOcrProvider {
             if (!currentTask || currentTask.status === 'cancelled') return;
             
             currentTask.progress = 10;
-            this.updateProgress(currentTask);
+            this.emitTaskUpdate(currentTask);
+            this.emitProgress(
+                this.calculateOverallProgress(),
+                this.getCompletedCount(),
+                this.tasks.size,
+                currentTask
+            );
             
             // Process OCR with cancellation support
             const text = await this.ocrProcessor(app, file, this.abortController.signal);
@@ -322,14 +383,20 @@ export class ParallelOcrProvider extends AbstractOcrProvider {
             // Check if cancelled
             if (this.abortController.signal.aborted) {
                 currentTask.status = 'cancelled';
-                this.updateProgress(currentTask);
+                this.emitTaskUpdate(currentTask);
                 return;
             }
             
             // Update progress after OCR
             currentTask.progress = 70;
             currentTask.result = text;
-            this.updateProgress(currentTask);
+            this.emitTaskUpdate(currentTask);
+            this.emitProgress(
+                this.calculateOverallProgress(),
+                this.getCompletedCount(),
+                this.tasks.size,
+                currentTask
+            );
             
             // Extract indicators
             const indicators = await this.matchExtractor(text);
@@ -338,7 +405,16 @@ export class ParallelOcrProvider extends AbstractOcrProvider {
             currentTask.progress = 100;
             currentTask.status = 'completed';
             currentTask.indicators = indicators;
-            this.updateProgress(currentTask);
+
+            // Emit events for the completed task
+            this.emitTaskUpdate(currentTask);
+            this.emitResult(task.filePath, indicators);
+            this.emitProgress(
+                this.calculateOverallProgress(),
+                this.getCompletedCount(),
+                this.tasks.size,
+                currentTask
+            );
             
         } catch (error) {
             // Handle errors
@@ -346,7 +422,15 @@ export class ParallelOcrProvider extends AbstractOcrProvider {
             if (currentTask && currentTask.status !== 'cancelled') {
                 currentTask.status = 'failed';
                 currentTask.error = error instanceof Error ? error : new Error(String(error));
-                this.updateProgress(currentTask);
+
+                this.emitTaskUpdate(currentTask);
+                this.emitError(currentTask.error, currentTask);
+                this.emitProgress(
+                    this.calculateOverallProgress(),
+                    this.getCompletedCount(),
+                    this.tasks.size,
+                    currentTask
+                );
             }
         }
     }
@@ -406,5 +490,13 @@ export class EmptyOcrProvider implements OcrProvider {
     
     getTasksStatus(): Map<string, OcrTask> {
         return new Map();
+    }
+    
+    on(event: OcrProviderEvent, listener: (...args: any[]) => void): void {
+        // Do nothing
+    }
+    
+    off(event: OcrProviderEvent, listener: (...args: any[]) => void): void {
+        // Do nothing
     }
 }

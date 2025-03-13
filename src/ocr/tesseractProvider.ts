@@ -4,12 +4,14 @@ import { ParsedIndicators } from "../searchSites";
 import { OcrProvider, ParallelOcrProvider } from "./provider";
 import { OcrTask, ProgressCallback } from "./tasks";
 import { readImageFile } from "./utils";
+import { EventEmitter } from "stream";
 
 /**
  * Updated Tesseract OCR provider that supports the new provider interface
  */
 export class TesseractOcrProvider implements OcrProvider {
     private plugin: Plugin;
+    protected emitter: EventEmitter = new EventEmitter();
     private worker: Worker | null;
     private delegateProvider: ParallelOcrProvider | null = null;
     
@@ -87,28 +89,6 @@ export class TesseractOcrProvider implements OcrProvider {
     }
 
     /**
-     * Set a callback for progress reporting
-     * @param callback Function to call with progress updates
-     */
-    setProgressCallback(callback: ProgressCallback): void {
-        if (this.delegateProvider) {
-            this.delegateProvider.setProgressCallback(callback);
-        }
-    }
-
-    /**
-     * Get the current progress callback
-     * @returns The current progress callback function or null if none is set
-     */
-    getProgressCallback(): ProgressCallback | null {
-        if (this.delegateProvider) {
-            return this.delegateProvider.getProgressCallback();
-        } else {
-            return null;
-        }
-    }
-
-    /**
      * Check if provider is ready to process files
      * @returns boolean indicating if the provider is ready
      */
@@ -163,5 +143,23 @@ export class TesseractOcrProvider implements OcrProvider {
                 1
             );
         }
+    }
+    
+    /**
+     * Subscribe to result events
+     * @param event Event name ('result' for new results)
+     * @param listener Callback function
+     */
+    on(event: string, listener: (...args: any[]) => void): void {
+        this.emitter.on(event, listener);
+    }
+    
+    /**
+     * Unsubscribe from result events
+     * @param event Event name
+     * @param listener Callback function
+     */
+    off(event: string, listener: (...args: any[]) => void): void {
+        this.emitter.off(event, listener);
     }
 }
