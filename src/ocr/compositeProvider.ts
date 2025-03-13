@@ -18,6 +18,7 @@ export class CompositeOcrProvider extends ParallelOcrProvider {
     protected emitter: EventEmitter = new EventEmitter();
     private combinedResults: Map<string, ParsedIndicators[]> = new Map();
     private providerProgress: Map<string, { progress: number, completed: number, total: number }> = new Map();
+    private providerProcessedFiles = new Map<string, Set<string>>();
     private processing: boolean = false;
     
     /**
@@ -147,38 +148,57 @@ export class CompositeOcrProvider extends ParallelOcrProvider {
      */
     addFiles(app: App, filePaths: string[]): void {
         this.processing = true;
-
-        // Initialize combined results map for these files
+        
+        // Initialize results map for these files
         for (const filePath of filePaths) {
             if (!this.combinedResults.has(filePath)) {
                 this.combinedResults.set(filePath, []);
             }
         }
         
+        // Add files to all providers
         for (const [id, provider] of this.providers.entries()) {
             if (provider.isReady()) {
-                provider.addFiles(app, filePaths);
-
+                // Get or create the set of files this provider has processed
+                if (!this.providerProcessedFiles.has(id)) {
+                    this.providerProcessedFiles.set(id, new Set<string>());
+                }
+                const processedFiles = this.providerProcessedFiles.get(id)!;
+                
+                // Filter out files that this provider has already processed
+                const newFilePaths = filePaths.filter(filePath => !processedFiles.has(filePath));
+                
+                // If no new files for this provider, skip
+                if (newFilePaths.length === 0) {
+                    continue;
+                }
+                
+                // Add new files to this provider
+                provider.addFiles(app, newFilePaths);
+                
+                // Mark these files as being processed by this provider
+                newFilePaths.forEach(filePath => processedFiles.add(filePath));
+                
                 // Initialize or update progress tracking
                 const currentProgress = this.providerProgress.get(id);
                 if (currentProgress) {
                     this.providerProgress.set(id, {
                         progress: currentProgress.progress,
                         completed: currentProgress.completed,
-                        total: currentProgress.total + filePaths.length
+                        total: currentProgress.total + newFilePaths.length
                     });
                 } else {
                     this.providerProgress.set(id, {
                         progress: 0,
                         completed: 0,
-                        total: filePaths.length
+                        total: newFilePaths.length
                     });
                 }
             }
         }
         
         this.updateOverallProgress();
-    }
+    }    
     
     /**
      * Cancel all ongoing OCR operations across all providers
@@ -292,9 +312,9 @@ export class CompositeOcrProvider extends ParallelOcrProvider {
             const tasks = provider.getTasksStatus();
             if (tasks.size === 0) return true;
             return Array.from(tasks.values()).every(task => {
-                task.status === 'completed' ||
-                task.status === 'failed' ||
-                task.status === 'cancelled'
+                return task.status === 'completed' ||
+                       task.status === 'failed' ||
+                       task.status === 'cancelled'
             });
         });
 

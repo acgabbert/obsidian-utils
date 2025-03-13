@@ -51,6 +51,27 @@ export class TesseractOcrProvider implements OcrProvider {
                 matchExtractor,
                 1
             );
+        
+            // Forward events from delegate provider to this provider's emitter
+            this.delegateProvider.on('result', (filePath, indicators) => {
+                this.emitter.emit('result', filePath, indicators);
+            });
+            
+            this.delegateProvider.on('progress', (progress, completed, total, task) => {
+                this.emitter.emit('progress', progress, completed, total, task);
+            });
+            
+            this.delegateProvider.on('taskUpdate', (task) => {
+                this.emitter.emit('taskUpdate', task);
+            });
+            
+            this.delegateProvider.on('error', (error, task) => {
+                this.emitter.emit('error', error, task);
+            });
+            
+            this.delegateProvider.on('complete', () => {
+                this.emitter.emit('complete');
+            });
         }
     }
 

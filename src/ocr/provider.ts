@@ -264,27 +264,29 @@ export class ParallelOcrProvider extends AbstractOcrProvider {
             Array.from(this.tasks.values())
                 .map(task => task.filePath)
         );
-
-        // Filter out files already in the queue
+        
+        // Filter out files that are already in the queue
         const newFilePaths = filePaths.filter(filePath => !existingFilePaths.has(filePath));
-
+        
         // If no new files, don't do anything
-        if (newFilePaths.length === 0) return;
-
+        if (newFilePaths.length === 0) {
+            return;
+        }
+        
         // Add files to tasks
-        for (const filePath of filePaths) {
+        for (const filePath of newFilePaths) {
             const taskId = this.generateTaskId();
             const task: OcrTask = {
                 id: taskId,
                 filePath,
                 status: 'pending',
                 progress: 0
-            }
+            };
+            
             this.tasks.set(taskId, task);
-
             this.emitTaskUpdate(task);
         }
-
+        
         // Emit initial progress
         this.emitProgress(0, 0, this.tasks.size);
         
@@ -292,7 +294,7 @@ export class ParallelOcrProvider extends AbstractOcrProvider {
         if (!this.processingPromise) {
             this.processingPromise = this.processQueue(app);
         }
-    }
+    }    
 
     /**
      * Check if provider is ready to process files
