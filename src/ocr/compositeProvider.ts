@@ -20,6 +20,8 @@ export class CompositeOcrProvider extends ParallelOcrProvider {
     private providerProgress: Map<string, { progress: number, completed: number, total: number }> = new Map();
     private providerProcessedFiles = new Map<string, Set<string>>();
     private processing: boolean = false;
+    private fileProgress: Map<string, number> = new Map();
+    private fileProviderStatus: Map<string, Map<string, boolean>> = new Map();
     
     /**
      * Add an OCR provider to the composite
@@ -40,12 +42,27 @@ export class CompositeOcrProvider extends ParallelOcrProvider {
             }
             this.combinedResults.get(filePath)!.push(...indicators);
             this.emitter.emit('result', filePath, indicators, id);
+
+            if (!this.fileProviderStatus.has(filePath)) {
+                this.fileProviderStatus.set(filePath, new Map());
+            }
+            this.fileProviderStatus.get(filePath)!.set(id, true);
+
+            // Update file progress to 100% for this provider
+            this.updateFileProgress(filePath, id, 1.0);
+            this.updateOverallProgress();
         });
 
         // Progress: track progress and emit aggregate progress
         provider.on('progress', (progress: number, completed: number, total: number, task?: OcrTask) => {
             this.providerProgress.set(id, { progress, completed, total });
             this.emitter.emit('providerProgress', id, progress, completed, total, task);
+
+            // Update file-specific progress if task is available
+            if (task) {
+                this.updateFileProgress(task.filePath, id, task.progress / 100);
+            }
+
             this.updateOverallProgress();
         });
 
@@ -210,6 +227,8 @@ export class CompositeOcrProvider extends ParallelOcrProvider {
         
         this.processing = false;
         this.providerProgress.clear();
+        this.fileProgress.clear();
+        this.fileProviderStatus.clear();
         this.emitter.emit('progress', 0, 0, 0);
     }
     
@@ -285,19 +304,81 @@ export class CompositeOcrProvider extends ParallelOcrProvider {
             this.emitter.emit('progress', 0, 0, 0);
             return;
         }
+
+        const allFiles = new Set<string>();
+        for (const task of Array.from(this.tasks.values())) {
+            allFiles.add(task.filePath);
+        }
+
+        let completedFiles = 0;
+        let totalProgress = 0;
+
+        for (const filePath of allFiles) {
+            if (!this.fileProviderStatus.has(filePath)) {
+                this.fileProviderStatus.set(filePath, new Map());
+            }
+
+            const providerStatus = this.fileProviderStatus.get(filePath)!;
+            const activeProviders = Array.from(this.providers.entries())
+                .filter(([_, provider]) => provider.isReady())
+                .map(([id, _]) => id);
+            
+            const allProvidersComplete = activeProviders.every(providerId => 
+                providerStatus.get(providerId) === true
+            );
+
+            if (allProvidersComplete && providerStatus.size > 0) {
+                completedFiles++;
+            }
+
+            if (!this.fileProgress.has(filePath)) {
+                this.fileProgress.set(filePath, 0);
+            }
+            totalProgress == this.fileProgress.get(filePath)!;
+        }
+
+        const fileCount = allFiles.size;
+        const overallProgress = fileCount > 0 ? totalProgress / fileCount : 0;
+
+        this.emitter.emit('progress', overallProgress, completedFiles, fileCount);
+    }
+
+    /**
+     * Update progress for a specific file/provider combination
+     */
+    private updateFileProgress(filePath: string, providerId: string, progress: number): void {
+        // Initialize file progress map if needed
+        if (!this.fileProgress.has(filePath)) {
+            this.fileProgress.set(filePath, 0);
+        }
+
+        // Get all provider progress for this file
+        if (!this.fileProviderStatus.has(filePath)) {
+            this.fileProviderStatus.set(filePath, new Map());
+        }
+        const providerStatus = this.fileProviderStatus.get(filePath)!;
+
+        // Update this provider's progress
+        providerStatus.set(providerId, progress >= 1.0);
+
+        // Calculate average progress across all active providers
+        const activeProviders = Array.from(this.providers.entries())
+            .filter(([_, provider]) => provider.isReady())
+            .map(([id, _]) => id);
         
         let totalProgress = 0;
-        let totalCompleted = 0;
-        let totalTasks = 0;
-        
-        for (const { progress, completed, total } of this.providerProgress.values()) {
-            totalProgress += progress * total;
-            totalCompleted += completed;
-            totalTasks += total;
+        let providerCount = 0;
+
+        for (const id of activeProviders) {
+            if (providerStatus.has(id)) {
+                totalProgress += providerStatus.get(id) === true ? 1.0 : 0;
+                providerCount++;
+            }
         }
-        
-        const overallProgress = totalTasks > 0 ? totalCompleted / totalTasks : 0;
-        this.emitter.emit('progress', overallProgress, totalCompleted, totalTasks);
+
+        // Update overall file progress (average across providers)
+        const averageProgress = providerCount > 0 ? totalProgress / providerCount : 0;
+        this.fileProgress.set(filePath, averageProgress);
     }
 
     /**
