@@ -1,17 +1,20 @@
 import { App, Plugin, TFile } from "obsidian";
 import { OcrTask, ProgressCallback } from "./tasks";
-import { ParsedIndicators } from "../searchSites";
+import { ParsedIndicators } from "../iocParser";
 import { EventEmitter } from "stream";
 
 /**
  * Standard event types for OCR providers
  */
 export type OcrProviderEvent = 
-  | 'result'    // Emitted when results for a file are available
-  | 'progress'  // Emitted when progress updates
-  | 'taskUpdate' // Emitted when a task's status changes
-  | 'error'     // Emitted when an error occurs
-  | 'complete';  // Emitted when all processing is complete
+    'result'         // Emitted when results for a file are available
+  | 'progress'       // Emitted when progress updates
+  | 'taskUpdate'     // Emitted when a task's status changes
+  | 'error'          // Emitted when an error occurs
+  | 'complete'       // Emitted when a file has been completed by a provider
+  | 'fileComplete'   // Emitted when a file has been completed by all providers
+  | 'file-progress'
+  | 'file-complete';
 
 /**
  * Interface for OCR providers that process files and extract indicators

@@ -1,6 +1,6 @@
 import { App, Plugin, TFile } from "obsidian";
 import { createWorker, type Worker } from "tesseract.js";
-import { ParsedIndicators } from "../searchSites";
+import { ParsedIndicators } from "../iocParser";
 import { OcrProvider, ParallelOcrProvider } from "./provider";
 import { OcrTask, ProgressCallback } from "./tasks";
 import { readImageFile } from "./utils";
@@ -182,5 +182,33 @@ export class TesseractOcrProvider implements OcrProvider {
      */
     off(event: string, listener: (...args: any[]) => void): void {
         this.emitter.off(event, listener);
+    }
+}
+
+export class TesseractProcessor {
+    private worker: Tesseract.Worker;
+    id: string = 'tesseract';
+    name: string = 'Tesseract OCR Processor';
+
+    constructor(worker: Tesseract.Worker) {
+        this.worker = worker;
+    }
+
+    /**
+     * Process file implementation for OCRProcessor interface.
+     * @param file file to be processed
+     * @returns file text contents
+     */
+    async processFile(buffer: Buffer): Promise<string> {
+        const result = await this.worker!.recognize(buffer);
+        return result.data.text;
+    }
+
+    /**
+     * Progress getter implementation for OCRProcessor interface.
+     * @returns OCR progress
+     */
+    getProgress(): number {
+        return 100;
     }
 }

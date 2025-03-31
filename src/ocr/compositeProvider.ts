@@ -2,17 +2,17 @@ import { App } from "obsidian";
 import { EventEmitter } from "events";
 import { OcrProvider, OcrProviderEvent, ParallelOcrProvider } from "./provider";
 import { OcrTask, ProgressCallback } from "./tasks";
-import { ParsedIndicators } from "../searchSites";
+import { ParsedIndicators } from "../iocParser";
 
-/**
- * A composite OCR provider that delegates OCR processing to multiple providers.
- * Results from all providers are combined transparently.
- */
 /**
  * Callback type for incremental results updates
  */
 export type ResultsCallback = (filePath: string, indicators: ParsedIndicators[], providerId: string) => void;
 
+/**
+ * A composite OCR provider that delegates OCR processing to multiple providers.
+ * Results from all providers are combined transparently.
+ */
 export class CompositeOcrProvider extends ParallelOcrProvider {
     private providers: Map<string, OcrProvider> = new Map();
     protected emitter: EventEmitter = new EventEmitter();
@@ -36,17 +36,12 @@ export class CompositeOcrProvider extends ParallelOcrProvider {
         // Establish event forwarding from this provider
 
         // Result: forward with provider ID and add to combined results
-        provider.on('result', (filePath: string, indicators: ParsedIndicators[]) => {
+        provider.on('result', (filePath: string, indicators: ParsedIndicators[], id: string) => {
             if (!this.combinedResults.has(filePath)) {
                 this.combinedResults.set(filePath, []);
             }
             this.combinedResults.get(filePath)!.push(...indicators);
             this.emitter.emit('result', filePath, indicators, id);
-
-            if (!this.fileProviderStatus.has(filePath)) {
-                this.fileProviderStatus.set(filePath, new Map());
-            }
-            this.fileProviderStatus.get(filePath)!.set(id, true);
 
             // Update file progress to 100% for this provider
             this.updateFileProgress(filePath, id, 1.0);
@@ -379,6 +374,21 @@ export class CompositeOcrProvider extends ParallelOcrProvider {
         // Update overall file progress (average across providers)
         const averageProgress = providerCount > 0 ? totalProgress / providerCount : 0;
         this.fileProgress.set(filePath, averageProgress);
+
+        // Check if all providers have completed this file
+        const allProvidersComplete = activeProviders.length > 0 && 
+            activeProviders.every(id => providerStatus.get(id) === true);
+        
+        // If all providers have completed provessing this file, emit fileComplete event
+        if (allProvidersComplete && this.fileProgress.get(filePath)! !== 1.0) {
+            this.fileProgress.set(filePath, 1.0);
+
+            // Get the combined results for this file
+            const fileResults = this.combinedResults.get(filePath) || [];
+
+            // Emit the fileComplete event with the file path and combined results
+            this.emitter.emit('fileComplete', filePath, fileResults);
+        }
     }
 
     /**

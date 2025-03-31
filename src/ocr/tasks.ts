@@ -1,4 +1,4 @@
-import { ParsedIndicators } from "../searchSites";
+import { ParsedIndicators } from "../iocParser";
 
 /**
  * Status of an OCR processing task

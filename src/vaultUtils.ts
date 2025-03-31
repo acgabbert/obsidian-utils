@@ -112,13 +112,13 @@ function getBacklinks(notePath: string, app: App, resolved = false): Array<strin
  * @param notePath the path of the note to check for attachment links
  * @param app the current App class instance
  */
-function getAttachments(notePath: string, app: App): Array<string> {
+function getAttachments(notePath: string, app: App): Array<TFile> {
     const links = getBacklinks(notePath, app, true);
-    const attachments = new Set<string>();
+    const attachments = new Set<TFile>();
     links.forEach((link) => {
         const file = app.vault.getAbstractFileByPath(link);
         if (file && file instanceof TFile && file.extension !== "md") {
-            attachments.add(file.path);
+            attachments.add(file);
         }
     });
     return Array.from(attachments);

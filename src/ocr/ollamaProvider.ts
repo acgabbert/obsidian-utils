@@ -1,6 +1,6 @@
 import { App, Plugin, TFile } from "obsidian";
 import { OllamaClient } from "../api/ollama"
-import { ParsedIndicators } from "../searchSites";
+import { ParsedIndicators } from "../iocParser";
 import { ParallelOcrProvider } from "./provider"
 import { encodeImageFile, readImageFile } from "./utils";
 

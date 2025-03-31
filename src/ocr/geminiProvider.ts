@@ -1,5 +1,5 @@
 import { App, TFile } from "obsidian";
-import { ParsedIndicators } from "../searchSites";
+import { ParsedIndicators } from "../iocParser";
 import { ParallelOcrProvider } from "./provider"
 import { encodeImageFile } from "./utils";
 import { GeminiClient } from "../api/gemini";
