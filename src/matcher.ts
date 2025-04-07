@@ -1,7 +1,6 @@
-import { Plugin } from "obsidian";
-import { DOMAIN_REGEX, FILE_REGEX, IP_REGEX, IPv4_REGEX, IPv6_REGEX, LOCAL_IP_REGEX, MACRO_REGEX, MD5_REGEX, SHA1_REGEX, SHA256_REGEX } from "./regex";
-import { filterExclusions, IndicatorExclusion, ParsedIndicators, SearchSite } from "./searchSites";
-import { extractMatches, isLocalIpv4, refangIoc, removeArrayDuplicates, validateDomains } from "./textUtils";
+import { DOMAIN_REGEX, FILE_REGEX, IP_REGEX, IPv6_REGEX, LOCAL_IP_REGEX, MACRO_REGEX, MD5_REGEX, SHA1_REGEX, SHA256_REGEX } from "./regex";
+import { filterExclusions, Indicator, IndicatorType, ParsedIndicators } from "./iocParser";
+import { isLocalIpv4, refangIoc } from "./textUtils";
 import { CyberPlugin } from "./cyberPlugin";
 
 export const PATTERN_KEYS = ['IPv6', 'IP', 'IPv4', 'LocalIP', 'Domain', 'SHA256', 'MD5', 'SHA1', 'File'];
@@ -54,35 +53,28 @@ export class Matcher {
  * @param fileContent content from which to extract IOCs
  * @returns an array of ParsedIndicators objects for each IOC type
  */
-export async function getMatches(this: CyberPlugin, fileContent: string): Promise<ParsedIndicators[]> {
-    let retval = [];
+export async function getMatches(fileContent: string): Promise<ParsedIndicators[]> {
+    if (!fileContent) return [];
     const ips: ParsedIndicators = {
         title: "IPs",
-        items: Matcher.findAll(fileContent, 'IPv4'),
-        sites: this.settings?.searchSites.filter((x: SearchSite) => x.enabled && x.ip)
+        items: Matcher.findAll(fileContent, 'IPv4')
     }
     const domains: ParsedIndicators = {
         title: "Domains",
-        items: Matcher.findAll(fileContent, 'Domain'),
-        sites: this.settings?.searchSites.filter((x: SearchSite) => x.enabled && x.domain)
+        items: Matcher.findAll(fileContent, 'Domain')
     }
     const hashes: ParsedIndicators = {
         title: "Hashes",
-        items: Matcher.findAll(fileContent, 'SHA256'),
-        sites: this.settings?.searchSites.filter((x: SearchSite) => x.enabled && x.hash)
+        items: Matcher.findAll(fileContent, 'SHA256')
     }
     const privateIps: ParsedIndicators = {
         title: "IPs (Private)",
-        items: [],
-        sites: this.settings?.searchSites.filter((x: SearchSite) => x.enabled && x.ip)
+        items: []
     }
     const ipv6: ParsedIndicators = {
         title: "IPv6",
-        items: Matcher.findAll(fileContent, 'IPv6'),
-        sites: this.settings?.searchSites.filter((x: SearchSite) => x.enabled && x.ip)
+        items: Matcher.findAll(fileContent, 'IPv6')
     }
-    if (this.validTld) 
-        domains.items = validateDomains(domains.items, this.validTld);
     ips.title = "IPs (Public)";
     for (let i = 0; i < ips.items.length; i++) {
         const item = ips.items[i];
@@ -92,14 +84,14 @@ export async function getMatches(this: CyberPlugin, fileContent: string): Promis
             privateIps.items.push(item);
         }
     }
-    retval.push(ips);
-    retval.push(privateIps);
-    retval.push(domains);
-    retval.push(hashes);
-    retval.push(ipv6)
+    const retval = [ips, privateIps, domains, hashes, ipv6];
+
+    // refang and de-duplicate IOCs
     retval.forEach((iocList, index, array) => {
-        iocList.items = iocList.items.map((x) => refangIoc(x));
-        iocList.items = removeArrayDuplicates(iocList.items);
+        const refangedItems = iocList.items.map((x) => refangIoc(x));
+        
+        // remove duplicates using a set
+        iocList.items = [...new Set(refangedItems)];
         array[index] = iocList;
     });
     return retval;
@@ -113,6 +105,7 @@ export async function getMatches(this: CyberPlugin, fileContent: string): Promis
  */
 export function processExclusions(iocs: ParsedIndicators[], plugin: CyberPlugin | undefined): ParsedIndicators[] {
     if (!iocs || !plugin) return iocs;
+    const exclusions = plugin.getIocExclusions();
     
     return iocs.map(indicatorList => {
         // create a copy to avoid modifying the original
@@ -122,16 +115,16 @@ export function processExclusions(iocs: ParsedIndicators[], plugin: CyberPlugin 
             case "IPs":
             case "IPs (Public)":
             case "IPs (Private)":
-                processed.exclusions = plugin.exclusions?.ipv4Exclusions || [];
+                processed.exclusions = exclusions.ipv4Exclusions || [];
                 break;
             case "IPv6":
-                processed.exclusions = plugin.exclusions?.ipv6Exclusions || [];
+                processed.exclusions = exclusions.ipv6Exclusions || [];
                 break;
             case "Domains":
-                processed.exclusions = plugin.exclusions?.domainExclusions || [];
+                processed.exclusions = exclusions.domainExclusions || [];
                 break;
             case "Hashes":
-                processed.exclusions = plugin.exclusions?.hashExclusions || [];
+                processed.exclusions = exclusions.hashExclusions || [];
                 break;
             default:
                 processed.exclusions = [];
