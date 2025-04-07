@@ -1,9 +1,7 @@
-import { Plugin } from "obsidian";
 import { DOMAIN_REGEX, FILE_REGEX, IP_REGEX, IPv6_REGEX, LOCAL_IP_REGEX, MACRO_REGEX, MD5_REGEX, SHA1_REGEX, SHA256_REGEX } from "./regex";
-import { filterExclusions, ParsedIndicators } from "./iocParser";
-import { isLocalIpv4, refangIoc, removeArrayDuplicates, validateDomains } from "./textUtils";
+import { filterExclusions, Indicator, IndicatorType, ParsedIndicators } from "./iocParser";
+import { isLocalIpv4, refangIoc } from "./textUtils";
 import { CyberPlugin } from "./cyberPlugin";
-import { SearchSite } from "./searchSites";
 
 export const PATTERN_KEYS = ['IPv6', 'IP', 'IPv4', 'LocalIP', 'Domain', 'SHA256', 'MD5', 'SHA1', 'File'];
 export type PatternKey = typeof PATTERN_KEYS[number];
@@ -55,35 +53,28 @@ export class Matcher {
  * @param fileContent content from which to extract IOCs
  * @returns an array of ParsedIndicators objects for each IOC type
  */
-export async function getMatches(fileContent: string, plugin: CyberPlugin): Promise<ParsedIndicators[]> {
+export async function getMatches(fileContent: string): Promise<ParsedIndicators[]> {
     if (!fileContent) return [];
     const ips: ParsedIndicators = {
         title: "IPs",
-        items: Matcher.findAll(fileContent, 'IPv4'),
-        sites: plugin.settings?.searchSites.filter((x: SearchSite) => x.enabled && x.ip)
+        items: Matcher.findAll(fileContent, 'IPv4')
     }
     const domains: ParsedIndicators = {
         title: "Domains",
-        items: Matcher.findAll(fileContent, 'Domain'),
-        sites: plugin.settings?.searchSites.filter((x: SearchSite) => x.enabled && x.domain)
+        items: Matcher.findAll(fileContent, 'Domain')
     }
     const hashes: ParsedIndicators = {
         title: "Hashes",
-        items: Matcher.findAll(fileContent, 'SHA256'),
-        sites: plugin.settings?.searchSites.filter((x: SearchSite) => x.enabled && x.hash)
+        items: Matcher.findAll(fileContent, 'SHA256')
     }
     const privateIps: ParsedIndicators = {
         title: "IPs (Private)",
-        items: [],
-        sites: plugin.settings?.searchSites.filter((x: SearchSite) => x.enabled && x.ip)
+        items: []
     }
     const ipv6: ParsedIndicators = {
         title: "IPv6",
-        items: Matcher.findAll(fileContent, 'IPv6'),
-        sites: plugin.settings?.searchSites.filter((x: SearchSite) => x.enabled && x.ip)
+        items: Matcher.findAll(fileContent, 'IPv6')
     }
-    if (plugin.validTld) 
-        domains.items = validateDomains(domains.items, plugin.validTld);
     ips.title = "IPs (Public)";
     for (let i = 0; i < ips.items.length; i++) {
         const item = ips.items[i];

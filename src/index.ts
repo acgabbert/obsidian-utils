@@ -18,7 +18,6 @@ export * from './api/ollama';
 export * from './ocr/compositeProvider';
 export * from './ocr/geminiProvider';
 export * from './ocr/ollamaProvider';
-export * from './ocr/provider';
 export * from './ocr/tasks';
 export * from './ocr/tesseractProvider';
 export * from './ocr/utils';
