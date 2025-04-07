@@ -7,8 +7,10 @@ import { getMatches } from "./matcher";
 import { initializeWorker } from "./ocr";
 import { validateDomains } from "./textUtils";
 import { filterExclusions, IndicatorExclusion, ParsedIndicators } from "./iocParser";
-import { IEventEmitter, IOcrProcessor, IOcrProvider, OcrCompletePayload, OcrErrorPayload, OcrJobData, OcrProgressPayload, OcrProvider, OcrProviderEvent, TesseractOcrProcessor } from "./ocr/ocrProvider";
+import { IEventEmitter, IOcrProvider, OcrCompletePayload, OcrErrorPayload, OcrJobData, OcrProgressPayload, OcrProvider, OcrProviderEvent } from "./ocr/ocrProvider";
 import { readImageFile } from "./ocr/utils";
+import { TesseractOcrProcessor } from "./ocr/tesseractProcessor";
+import { IOcrProcessor } from "./ocr/baseProcessor";
 
 export interface CyberPluginSettings {
     validTld: string[];
@@ -28,6 +30,8 @@ export type CyberPluginEvent = 'settings-change' | 'file-opened' | 'file-modifie
  * An Obsidian plugin class focused on Cybersecurity use cases.
  */
 export class CyberPlugin extends Plugin {
+    private isDebugging: boolean = false;
+
     settings: CyberPluginSettings | undefined;
     validTld: string[] | null | undefined;
     sidebarContainers: Map<string, WorkspaceLeaf> | undefined;
@@ -51,12 +55,13 @@ export class CyberPlugin extends Plugin {
     private ocrCompleteRef?: (payload: OcrCompletePayload) => Promise<void>;
     private ocrErrorRef?: (payload: OcrErrorPayload) => void;
 
-    private worker: Tesseract.Worker | null = null;
+    protected worker: Tesseract.Worker | null = null;
     // private fileProgressRef: () => void;
     // private fileCompleteRef: () => void;
 
-    constructor(app: App, manifest: PluginManifest) {
+    constructor(app: App, manifest: PluginManifest, enableDebug: boolean = false) {
         super(app, manifest);
+        this.isDebugging = enableDebug;
         
         // Initialize emitter
         this.emitter = new EventEmitter();
@@ -173,7 +178,7 @@ export class CyberPlugin extends Plugin {
             return;
         }
 
-        console.debug(`Triggering OCR for ${this.activeFileAttachments.length} new attachment(s)...`);
+        this.debug(`Triggering OCR for ${this.activeFileAttachments.length} new attachment(s)...`);
 
         const ocrJobs: OcrJobData[] = [];
         for (const att of this.activeFileAttachments) {
@@ -183,7 +188,7 @@ export class CyberPlugin extends Plugin {
                     fileId: att.path,
                     imageData: content
                 });
-                console.log(`Added Job for ${att.path}`);
+                this.debug(`Added Job for ${att.path}`);
             } catch (error) {
                 console.error(`Failed to read or encode attachment ${att.path}`, error);
                 this.handleOcrError({
@@ -296,13 +301,13 @@ export class CyberPlugin extends Plugin {
         const cacheChecker = this.hasCachedOcrResult.bind(this);
 
         this.ocrProvider = new OcrProvider(processors, cacheChecker);
-        console.log(`OCR Provider initialized with ${processors.length} processors`);
+        this.debug(`OCR Provider initialized with ${processors.length} processors`);
     }
 
     public hasCachedOcrResult(fileId: string, processorId: string): boolean {
         const hasResult = this.ocrCache.get(fileId)?.has(processorId) ?? false;
         if (hasResult) {
-            console.debug(`[Cache Check] Cache hit for ${fileId} using ${processorId}.`);
+            this.debug(`[Cache Check] Cache hit for ${fileId} using ${processorId}.`);
         }
         return hasResult;
     }
@@ -320,7 +325,7 @@ export class CyberPlugin extends Plugin {
     }
 
     async handleOcrComplete(payload: OcrCompletePayload): Promise<void> {
-        console.debug(`OCR Complete: ${payload.fileId} by ${payload.processorId}`);
+        this.debug(`OCR Complete: ${payload.fileId} by ${payload.processorId}`);
         if (!this.activeFileAttachments?.some(att => att.path === payload.fileId)) {
             console.warn(`Received OCR result for ${payload.fileId} which is not an attachment of the active file`);
             return;
@@ -334,9 +339,10 @@ export class CyberPlugin extends Plugin {
         const fileCache = this.ocrCache.get(payload.fileId);
         if (fileCache) {
             fileCache.set(payload.processorId, indicators);
-            console.debug(`Cached OCR results from ${payload.processorId} for ${payload.fileId}`);
+            this.debug(`Cached OCR results from ${payload.processorId} for ${payload.fileId}`);
         }
-        console.log(indicators);
+        this.debug(indicators);
+        this.emitter.emit('indicators-changed');
     }
 
     handleOcrError(payload: OcrErrorPayload): void {
@@ -344,7 +350,7 @@ export class CyberPlugin extends Plugin {
     }
 
     handleOcrProgress(payload: OcrProgressPayload): void {
-        console.debug(`OCR Progress: ${payload.fileId} by ${payload.processorId}: ${payload.status} ${payload.progressPercent ?? ''}% ${payload.message ?? ''}`);
+        this.debug(`OCR Progress: ${payload.fileId} by ${payload.processorId}: ${payload.status} ${payload.progressPercent ?? ''}% ${payload.message ?? ''}`);
     }
 
     /**
@@ -373,5 +379,19 @@ export class CyberPlugin extends Plugin {
         if (this.vaultCacheRef) this.app.metadataCache.offref(this.vaultCacheRef);
         
         this.worker?.terminate();
+    }
+
+    public setDebugging(enabled: boolean): void {
+        const changed = this.isDebugging !== enabled;
+        this.isDebugging = enabled;
+        if (changed) {
+            this.debug(`Debugging ${enabled ? 'enabled' : 'disabled'}.`);
+        }
+    }
+
+    protected debug(...args: any[]): void {
+        if (this.isDebugging) {
+            console.log(`[${this.manifest.name}]`, ...args);
+        }
     }
 }
