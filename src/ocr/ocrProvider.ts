@@ -1,7 +1,6 @@
 import { EventEmitter } from "events";
 
-import { GeminiClient } from "../api/gemini";
-import { BaseOcrProcessor, IOcrProcessor } from "./baseProcessor";
+import { IOcrProcessor } from "./baseProcessor";
 
 export interface OcrJobData {
     fileId: string;
@@ -45,10 +44,12 @@ export interface IOcrProvider {
     readonly emitter: IEventEmitter<OcrProviderEvent>;
     processAttachments(fileId: string, attachments: OcrJobData[]): Promise<void>;
     addProcessor(processor: IOcrProcessor): void;
+    setDebugging(enabled: boolean): void;
 };
 
 export class OcrProvider implements IOcrProvider {
     public readonly emitter: IEventEmitter<OcrProviderEvent>;
+    private activeJobs: Set<string> = new Set();
     private isDebugging: boolean = false;
     private processors: IOcrProcessor[];
     // Shared emitter instance for communication between processors and this provider
@@ -77,27 +78,38 @@ export class OcrProvider implements IOcrProvider {
             this.emitter.emit('ocr-progress', payload);
         });
         this.processorEventEmitter.on('ocr-complete', (payload) => {
-            // Relay complete events directly
+            const jobId = this.getJobId(payload.fileId, payload.processorId);
+            this.activeJobs.delete(jobId); // remove on completion
+            this.debug(`Completed ${jobId}. Active jobs: ${this.activeJobs.size}`);
             this.emitter.emit('ocr-complete', payload);
         });
         this.processorEventEmitter.on('ocr-error', (payload) => {
-            // Relay error events directly
+            const jobId = this.getJobId(payload.fileId, payload.processorId);
+            this.activeJobs.delete(jobId);
+            this.debug(`Errored ${jobId}. Active jobs: ${this.activeJobs.size}`);
             this.emitter.emit('ocr-error', payload);
         });
     }
 
     async processAttachments(parentNoteFileId: string, attachments: OcrJobData[]): Promise<void> {
-        this.debug(`[OcrProvider] Starting processing for ${attachments.length} attachments for note '${parentNoteFileId}'.`);
+        this.debug(`Starting processing for ${attachments.length} attachments for note '${parentNoteFileId}'.`);
         
         const allProcessingPromises: Promise<void>[] = [];
 
         for (const attachmentJob of attachments) {
-            this.debug(`[OcrProvider] Processing attachment: ${attachmentJob.fileId}`);
+            this.debug(`Processing attachment: ${attachmentJob.fileId}`);
             for (const processor of this.processors) {
+                const jobId = this.getJobId(attachmentJob.fileId, processor.id);
                 if (this.cacheChecker(attachmentJob.fileId, processor.id)) {
-                    this.debug(`[OcrProvider] Skipping ${processor.id} for ${attachmentJob.fileId} due to cache hit.`)
+                    this.debug(`Skipping ${jobId} due to cache hit.`)
                     continue;
                 }
+                if (this.activeJobs.has(jobId)) {
+                    this.debug(`Skipping ${jobId} - already active/queued.`)
+                    continue;
+                }
+                this.activeJobs.add(jobId);
+                this.debug(`Queuing ${jobId}. Active jobs: ${this.activeJobs.size}`);
                 // Emit queued status before actual processing
                 this.processorEventEmitter.emit('ocr-progress', {
                     fileId: attachmentJob.fileId,
@@ -105,21 +117,11 @@ export class OcrProvider implements IOcrProvider {
                     status: 'queued',
                     message: `Queued for ${processor.id}`
                 });
-                /*
-                await processor.processImage(attachmentJob)
-                    .catch(err => {
-                        console.error(`[OcrProvider] Error starting ${processor.id} for ${attachmentJob.fileId}:`, err);
-                        this.processorEventEmitter.emit('ocr-error', {
-                            fileId: attachmentJob.fileId,
-                            processorId: processor.id,
-                            error: `Failed to initiate processing: ${err.message}`,
-                            canRetry: false
-                        });
-                    });*/
+                
                 allProcessingPromises.push(
                     processor.processImage(attachmentJob)
                         .catch(err => {
-                            console.error(`[OcrProvider] Error starting ${processor.id} for ${attachmentJob.fileId}:`, err);
+                            console.error(`Error starting ${processor.id} for ${attachmentJob.fileId}:`, err);
                             this.processorEventEmitter.emit('ocr-error', {
                                 fileId: attachmentJob.fileId,
                                 processorId: processor.id,
@@ -131,9 +133,8 @@ export class OcrProvider implements IOcrProvider {
                 this.debug(`queued ${allProcessingPromises.length}`)
             }
         }
-        // await Promise.allSettled(allProcessingPromises);
 
-        this.debug(`[OcrProvider] Finished initiating all jobs for note ${parentNoteFileId}. Waiting for results via events.`);
+        this.debug(`Finished initiating all jobs for note ${parentNoteFileId}. Active jobs: ${this.activeJobs.size}. Waiting for results via events.`);
     }
 
     public addProcessor(processor: IOcrProcessor): void {
@@ -155,5 +156,9 @@ export class OcrProvider implements IOcrProvider {
         if (this.isDebugging) {
             console.log(`[OcrProvider]`, ...args)
         }
+    }
+
+    private getJobId(fileId: string, processorId: string): string {
+        return `${fileId}-${processorId}`;
     }
 }
