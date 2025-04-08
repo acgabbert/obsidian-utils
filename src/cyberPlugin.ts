@@ -432,7 +432,6 @@ export class CyberPlugin extends Plugin {
     }
 
     protected debug(...args: any[]): void {
-        console.log('debug called')
         if (this.isDebugging) {
             console.log(`[${this.manifest.name}]`, ...args);
         }
