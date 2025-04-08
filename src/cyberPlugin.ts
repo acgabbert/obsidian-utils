@@ -3,10 +3,10 @@ import { EventEmitter } from "events";
 
 import { SearchSite } from "./searchSites";
 import { getAttachments } from "./vaultUtils";
-import { getMatches } from "./matcher";
+import { getIndicatorMatches, getMatches } from "./matcher";
 import { initializeWorker } from "./ocr";
 import { validateDomains } from "./textUtils";
-import { filterExclusions, IndicatorExclusion, ParsedIndicators } from "./iocParser";
+import { filterExclusions, Indicator, IndicatorExclusion, IndicatorSource, ParsedIndicators } from "./iocParser";
 import { IEventEmitter, IOcrProvider, OcrCompletePayload, OcrErrorPayload, OcrJobData, OcrProgressPayload, OcrProvider, OcrProviderEvent } from "./ocr/ocrProvider";
 import { readImageFile } from "./ocr/utils";
 import { TesseractOcrProcessor } from "./ocr/tesseractProcessor";
@@ -36,9 +36,9 @@ export class CyberPlugin extends Plugin {
     validTld: string[] | null | undefined;
     sidebarContainers: Map<string, WorkspaceLeaf> | undefined;
     protected emitter: EventEmitter;
-    protected indicators: ParsedIndicators[];
-    protected ocrIndicators: ParsedIndicators[] | null = null;
-    protected ocrCache: Map<string, Map<string, ParsedIndicators[]>> = new Map();
+    protected indicators: Indicator[];
+    protected ocrIndicators: Indicator[] | null = null;
+    protected ocrCache: Map<string, Map<string, Indicator[]>> = new Map();
     protected exclusions: IndicatorExclusions;
     private fileOpenRef: EventRef | null = null;
     private fileModifyRef: EventRef | null = null;
@@ -88,17 +88,37 @@ export class CyberPlugin extends Plugin {
             await this.initializeOcrSystem();
         }
 
-        this.setupOcrEventListeners();
-
         this.worker = await initializeWorker();
         this.ocrProvider?.addProcessor(new TesseractOcrProcessor(this.worker));
+
+        this.setupOcrEventListeners();
     }
 
     async refreshIndicators() {
         // Refresh static indicators from Markdown content
         if (this.activeFile && this.activeFileContent) {
-            this.indicators = await getMatches(this.activeFileContent);
+            this.indicators = getIndicatorMatches(this.activeFileContent, IndicatorSource.TEXT);
+            this.debug(`Refreshed ${this.indicators.length} indicators from Markdown text.`);
+        } else {
+            this.indicators = [];
         }
+
+        const collectedOcrIndicators: Indicator[] = [];
+        if (this.activeFileAttachments && this.activeFileAttachments.length > 0) {
+            this.debug(`Checking OCR cache for ${this.activeFileAttachments.length} attachments.`);
+            for (const att of this.activeFileAttachments) {
+                const fileCache = this.ocrCache.get(att.path);
+                if (fileCache) {
+                    for (const ind of fileCache.values()) {
+                        collectedOcrIndicators.push(...ind);
+                    }
+                    this.debug(`Found cached OCR indicators for ${att.path}`);
+                } else {
+                    this.debug(`No cached OCR indicators for ${att.path}`);
+                }
+            }
+        }
+        this.ocrIndicators = collectedOcrIndicators;
 
         this.emitter.emit('indicators-changed');
     }
@@ -121,14 +141,18 @@ export class CyberPlugin extends Plugin {
      * @returns true if attachments are unchanged, false if attachments have changed
      */
     private compareAttachments(file: TFile): boolean {
-        const attachments = getAttachments(file.path, this.app);
-        const set1 = new Set(attachments);
-        const set2 = new Set(this.activeFileAttachments);
+        const currentAttachments = getAttachments(file.path, this.app);
+        const existingAttachments = this.activeFileAttachments ?? [];
+        
+        const currentPaths = new Set(currentAttachments.map(f => f.path));
+        const existingPaths = new Set(existingAttachments.map(f => f.path));
 
-        const unchanged = set1.size === set2.size && [...set1].every(item => set2.has(item));
+        const unchanged = currentPaths.size === existingPaths.size &&
+                          [...currentPaths].every(path => existingPaths.has(path));
 
         if (!unchanged) {
-            this.activeFileAttachments = attachments;
+            this.debug(`Attachments changed for ${file.path}. New count: ${currentPaths.size}, Old count: ${existingPaths.size}`);
+            this.activeFileAttachments = currentAttachments;
             this.emitter.emit('attachments-changed');
         }
         return unchanged;
@@ -146,6 +170,7 @@ export class CyberPlugin extends Plugin {
             this.activeFileContent = await this.app.vault.cachedRead(file);
             this.compareAttachments(file);
             this.emitter.emit('file-opened');
+            await this.refreshIndicators();
             this.triggerOcrProcessing();
         } else {
             this.activeFile = null;
@@ -153,23 +178,34 @@ export class CyberPlugin extends Plugin {
             this.activeFileAttachments = null;
             this.indicators = [];
             this.ocrIndicators = [];
+            await this.refreshIndicators();
+            this.debug("Active file closed or is not a TFile, indicators cleared.");
         }
-        await this.refreshIndicators();
     }
 
     async handleFileModify(file: TAbstractFile): Promise<void> {
         if (file === this.activeFile && file instanceof TFile) {
             this.activeFileContent = await this.app.vault.cachedRead(file);
-            this.compareAttachments(file);
+            const attachmentsChanged = this.compareAttachments(file);
             this.emitter.emit('file-modified');
             await this.refreshIndicators();
+
+            if (attachmentsChanged) {
+                this.debug("Attachments changed during file modify, re-triggering OCR processing.");
+                this.triggerOcrProcessing();
+            }
         }
     }
 
     async handleMetadataResolve(file: TFile): Promise<void> {
         if (file === this.activeFile) {
-            this.compareAttachments(file);
+            const attachmentsChanged = this.compareAttachments(file);
             await this.refreshIndicators();
+
+            if (attachmentsChanged) {
+                this.debug("Attachments changed during metadata resolve, re-triggering OCR processing.");
+                this.triggerOcrProcessing();
+            }
         }
     }
 
@@ -326,23 +362,29 @@ export class CyberPlugin extends Plugin {
 
     async handleOcrComplete(payload: OcrCompletePayload): Promise<void> {
         this.debug(`OCR Complete: ${payload.fileId} by ${payload.processorId}`);
-        if (!this.activeFileAttachments?.some(att => att.path === payload.fileId)) {
-            console.warn(`Received OCR result for ${payload.fileId} which is not an attachment of the active file`);
-            return;
+
+        // Check if the completed OCR belongs to an attachment of the current file
+        const isRelevantAttachment = this.activeFileAttachments?.some(att => att.path === payload.fileId);
+        if (!isRelevantAttachment) {
+            this.debug(`Received OCR result for ${payload.fileId} which is not an attachment of the active file`);
         }
 
-        const indicators = await getMatches(payload.extractedText);
+        const indicators = getIndicatorMatches(payload.extractedText, IndicatorSource.OCR, {'processor': payload.processorId});
+        this.debug(`Extracted ${indicators.length} indicators via OCR from ${payload.fileId}.`);
 
         if (!this.ocrCache.has(payload.fileId)) {
-            this.ocrCache.set(payload.fileId, new Map<string, ParsedIndicators[]>());
+            this.ocrCache.set(payload.fileId, new Map<string, Indicator[]>());
         }
         const fileCache = this.ocrCache.get(payload.fileId);
         if (fileCache) {
             fileCache.set(payload.processorId, indicators);
             this.debug(`Cached OCR results from ${payload.processorId} for ${payload.fileId}`);
         }
-        this.debug(indicators);
-        this.emitter.emit('indicators-changed');
+
+        if (isRelevantAttachment) {
+            this.debug(`OCR result is for a relevant attachment (${payload.fileId}), refreshing indicators.`);
+            await this.refreshIndicators();
+        }
     }
 
     handleOcrError(payload: OcrErrorPayload): void {
@@ -390,6 +432,7 @@ export class CyberPlugin extends Plugin {
     }
 
     protected debug(...args: any[]): void {
+        console.log('debug called')
         if (this.isDebugging) {
             console.log(`[${this.manifest.name}]`, ...args);
         }

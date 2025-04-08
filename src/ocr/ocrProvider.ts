@@ -133,8 +133,11 @@ export class OcrProvider implements IOcrProvider {
                 this.debug(`queued ${allProcessingPromises.length}`)
             }
         }
-
-        this.debug(`Finished initiating all jobs for note ${parentNoteFileId}. Active jobs: ${this.activeJobs.size}. Waiting for results via events.`);
+        if (this.activeJobs.size > 0) {
+            this.debug(`Finished initiating all jobs for note ${parentNoteFileId}. Active jobs: ${this.activeJobs.size}. Waiting for results via events.`);
+        } else {
+            this.debug(`No active jobs for ${parentNoteFileId}.`)
+        }
     }
 
     public addProcessor(processor: IOcrProcessor): void {

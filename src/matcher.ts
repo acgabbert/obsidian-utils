@@ -1,5 +1,5 @@
 import { DOMAIN_REGEX, FILE_REGEX, IP_REGEX, IPv6_REGEX, LOCAL_IP_REGEX, MACRO_REGEX, MD5_REGEX, SHA1_REGEX, SHA256_REGEX } from "./regex";
-import { filterExclusions, Indicator, IndicatorType, ParsedIndicators } from "./iocParser";
+import { filterExclusions, Indicator, IndicatorSource, IndicatorType, ParsedIndicators } from "./iocParser";
 import { isLocalIpv4, refangIoc } from "./textUtils";
 import { CyberPlugin } from "./cyberPlugin";
 
@@ -53,7 +53,7 @@ export class Matcher {
  * @param fileContent content from which to extract IOCs
  * @returns an array of ParsedIndicators objects for each IOC type
  */
-export async function getMatches(fileContent: string): Promise<ParsedIndicators[]> {
+export function getMatches(fileContent: string): ParsedIndicators[] {
     if (!fileContent) return [];
     const ips: ParsedIndicators = {
         title: "IPs",
@@ -95,6 +95,63 @@ export async function getMatches(fileContent: string): Promise<ParsedIndicators[
         array[index] = iocList;
     });
     return retval;
+}
+
+export function getIndicatorMatches(fileContent: string, source: IndicatorSource = IndicatorSource.TEXT, metadata?: Record<string, any>): Indicator[] {
+    const indicators: Indicator[] = [];
+    if (!fileContent) return indicators;
+
+    const ipv4Addresses = Matcher.findAll(fileContent, 'IPv4');
+    for (const ip of ipv4Addresses) {
+        const refangedIp = refangIoc(ip);
+        if (isLocalIpv4(refangedIp)) {
+            indicators.push({
+                value: refangedIp,
+                type: IndicatorType.PRIVATE_IPv4,
+                source,
+                metadata
+            });
+        } else {
+            indicators.push({
+                value: refangedIp,
+                type: IndicatorType.IPv4,
+                source,
+                metadata
+            });
+        }
+    }
+
+    const ipv6Addresses = Matcher.findAll(fileContent, 'IPv6');
+    for (const ip of ipv6Addresses) {
+        indicators.push({
+            value: refangIoc(ip),
+            type: IndicatorType.IPv6,
+            source,
+            metadata
+        });
+    }
+
+    const domains = Matcher.findAll(fileContent, 'Domain');
+    for (const domain of domains) {
+        indicators.push({
+            value: refangIoc(domain),
+            type: IndicatorType.DOMAIN,
+            source,
+            metadata
+        });
+    }
+
+    const sha256Hashes = Matcher.findAll(fileContent, 'SHA256');
+    for (const hash of sha256Hashes) {
+        indicators.push({
+            value: hash,
+            type: IndicatorType.HASH,
+            source,
+            metadata
+        });
+    }
+
+    return indicators;
 }
 
 /**
