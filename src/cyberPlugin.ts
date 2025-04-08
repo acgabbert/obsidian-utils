@@ -173,7 +173,7 @@ export class CyberPlugin extends Plugin {
         }
     }
 
-    private async triggerOcrProcessing(): Promise<void> {
+    protected async triggerOcrProcessing(): Promise<void> {
         if (!this.ocrProvider || !this.activeFileAttachments || this.activeFileAttachments.length === 0) {
             return;
         }
