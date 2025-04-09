@@ -1,6 +1,6 @@
 import { request, RequestUrlParam } from "obsidian";
 
-export { OpenAICompatibleClient, Role, ToolCall, Message, Tool, FunctionConfig, ChatCompletionRequest, ChatCompletionResponse, OpenAiClientConfig };
+export { OpenAICompatibleClient, ObsidianLLMTool, Role, ToolCall, Message, Tool, FunctionConfig, ChatCompletionRequest, ChatCompletionResponse, OpenAiClientConfig };
 
 type Role = 'system' | 'user' | 'assistant' | 'developer' | 'tool';
 
@@ -18,6 +18,11 @@ interface Message {
     content?: string;
     tool_call_id?: string;
     tool_calls?: ToolCall[];
+}
+
+interface ObsidianLLMTool {
+    toolConfig: Tool;
+    implementation: (args: any) => Promise<string>;
 }
 
 interface Tool {
@@ -62,7 +67,9 @@ interface OpenAiClientConfig {
     apiKey?: string;
     headers?: Record<string, string>;
     systemMessage?: string;
-    tools?: Tool[];
+    tools?: ObsidianLLMTool[];
+    toolCallLimit?: number;
+    isDebugging?: boolean;
 }
 
 
@@ -71,17 +78,23 @@ interface OpenAiClientConfig {
  */
 class OpenAICompatibleClient {
     protected baseURL: string;
+    protected defaultEndpoint: string = "/chat/completions";
+    protected name: string = "OpenAI-Compatible Client";
+    protected isDebugging: boolean = false;
     protected apiKey: string;
     protected headers: Record<string, string>;
     protected model: string;
-    private messageHistory!: Message[];
-    private systemMessage?: Message;
-    private tools?: Tool[];
+    protected messageHistory!: Message[];
+    protected systemMessage?: Message;
+    protected tools?: ObsidianLLMTool[];
+    protected toolCallLimit: number;
 
     constructor(config: OpenAiClientConfig) {
         this.baseURL = config.baseUrl ?? 'https://api.openai.com/v1';
         this.apiKey = config.apiKey ?? '';
         this.model = config.model ?? '';
+        this.isDebugging = config.isDebugging || false;
+        this.toolCallLimit = config.toolCallLimit ?? 5;
         this.tools = config.tools;
         this.headers = {
             'Authorization': this.apiKey ? `Bearer ${this.apiKey}` : '',
@@ -104,7 +117,7 @@ class OpenAICompatibleClient {
      * @param content the contents of the message
      * @returns a ChatCompletionResponse object
      */
-    async chat(content: string): Promise<ChatCompletionResponse> {
+    async chat(content: string, model?: string): Promise<ChatCompletionResponse> {
         const userMessage: Message = {
             role: 'user',
             content: content
@@ -112,7 +125,30 @@ class OpenAICompatibleClient {
 
         this.messageHistory.push(userMessage);
         
-        return this.conversationRequest();
+        let response = await this.conversationRequest(model);
+        let toolCallCount = 0;
+
+        while (
+            response.choices[0].message.tool_calls &&
+            response.choices[0].message.tool_calls.length > 0 &&
+            toolCallCount < this.toolCallLimit
+        ) {
+            toolCallCount++;
+            const toolCalls = response.choices[0].message.tool_calls;
+
+            for (const toolCall of toolCalls) {
+                const toolResult = await this.executeToolCall(toolCall);
+                this.messageHistory.push({
+                    role: 'tool',
+                    tool_call_id: toolCall.id,
+                    content: toolResult
+                });
+            }
+
+            response = await this.conversationRequest(model);
+        }
+
+        return response;
     }
 
 
@@ -120,28 +156,63 @@ class OpenAICompatibleClient {
      * Make a conversation request with the current message history.
      * @returns a ChatCompletionResponse object
      */
-    private async conversationRequest(): Promise<ChatCompletionResponse> {
+    protected async conversationRequest(model?: string): Promise<ChatCompletionResponse> {
+        model = model ?? this.model;
         const requestBody: ChatCompletionRequest = {
             messages: this.messageHistory,
-            model: this.model,
-            tools: this.tools
+            model: model,
+            tools: this.tools?.map(tool => tool.toolConfig)
         }
 
         try {
             const body = JSON.stringify(requestBody);
             const params = {
-                url: this.baseURL + '/chat/completions',
+                url: this.baseURL + this.defaultEndpoint,
                 headers: this.headers,
                 throw: true,
                 body: body,
                 method: 'POST'
             } as RequestUrlParam;
             const response = JSON.parse(await request(params)) as ChatCompletionResponse;
+            this.debug(`Received ${response.choices.length} messages:`);
+            this.debug(response);
             response.choices.forEach((message) => this.messageHistory.push(message.message));
             return response;
         } catch (error) {
             console.error('API request failed:', error);
             throw error;
+        }
+    }
+
+    /**
+     * Execute a tool call.
+     * @param toolCall 
+     */
+    protected async executeToolCall(toolCall: ToolCall): Promise<string> {
+        const functionName = toolCall.function.name;
+        const toolFunction = this.tools?.find(tool => tool.toolConfig.function.name === functionName)?.implementation;
+        if (!toolFunction) {
+            const message = `No tool exists with name ${functionName}.`;
+            console.error(message);
+            return message;
+        }
+
+        let argsObject: any = {};
+
+        try {
+            argsObject = JSON.parse(toolCall.function.arguments);
+        } catch (e) {
+            console.error("Failed to parse tool arguments:", e);
+            return "Error: Failed to parse tool arguments."
+        }
+
+        this.debug(`Executing ${functionName} with args: ${argsObject}`);
+        
+        try {
+            return await toolFunction(argsObject) ?? "Tool returned no results.";
+        } catch (e) {
+            console.error(`Error executing tool ${functionName}`, e);
+            return `Error executing tool ${functionName}.`;
         }
     }
 
@@ -212,10 +283,9 @@ class OpenAICompatibleClient {
     
     /**
      * Add a tool to the client
-     * @param func a FunctionConfig object
+     * @param func a ObsidianTool object
      */
-    addTool(func: FunctionConfig) {
-        let tool: Tool = {type: 'function', function: func};
+    addTool(tool: ObsidianLLMTool) {
         if (!this.tools) this.tools = [tool];
         else this.tools.push(tool);
     }
@@ -234,5 +304,40 @@ class OpenAICompatibleClient {
             content: content
         });
         return this.conversationRequest();
+    }
+
+    /**
+     * Get the list of tools.
+     * @returns the list of tools.
+     */
+    getTools(): ObsidianLLMTool[] | undefined {
+        return this.tools;
+    }
+
+    /**
+     * Set API key.
+     * @param key API key string
+     */
+    setApiKey(key: string): void {
+        this.apiKey = key;
+        this.headers.Authorization = this.apiKey ? `Bearer ${this.apiKey}` : '';
+    }
+
+    /**
+     * Set default model.
+     * @param model model selection
+     */
+    setModel(model: string): void {
+        this.model = model;
+    }
+
+    /**
+     * Log a debug message if configured.
+     * @param message the message to be logged
+     */
+    debug(message: any): void {
+        if (this.isDebugging) {
+            console.debug(`[${this.name}] ${message}`);
+        }
     }
 }
