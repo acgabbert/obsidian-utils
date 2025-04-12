@@ -5,15 +5,10 @@ import {
     defangDomain,
     defangEmail,
     defangIp,
-    DOMAIN_REGEX,
     extractMacros,
-    findFirstByRegex,
     folderPrefs,
     friendlyDatetime,
     getValidTld,
-    IP_REGEX,
-    IPv6_REGEX,
-    isLocalIpv4,
     localDateTime,
     lowerMd5,
     lowerSha256,
@@ -113,6 +108,9 @@ test('Friendly prints date/time (e.g. "[DATE] at [TIME]")', () => {
 });
 
 test('Validates TLDs', async () => {
+    request.mockImplementationOnce(() => {
+        return ['COM', 'ORG', 'ME', 'INFO'].join('\n')
+    });
     let validTld = await getValidTld();
     //if (!validTld) validTld = ['COM', 'ORG', 'ME', 'INFO'];
     if (!validTld) return;
@@ -182,10 +180,14 @@ test('Tests proper folder structure', () => {
 });
 
 test('Tests error handling', async () => {
+    const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    request.mockReset();
     request.mockImplementationOnce(() => {
         throw new Error('Mocked error');
     });
     expect(await getValidTld()).toBe(null);
+    expect(errorSpy).toHaveBeenCalled();
+    errorSpy.mockRestore();
 });
 
 test('Tests template behavior', () => {

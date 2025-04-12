@@ -85,7 +85,7 @@ test('Recognizes file names', () => {
     const test1 = `
     C:\\asdf.txt + C:\\Windows\\system32\\explorer.exe
     D:\\fffffff.exe`;
-    console.log(test1);
+    // console.log(test1);
     expect(test1.match(FILE_REGEX)?.length).toBe(3);
 });
 
@@ -94,7 +94,7 @@ test('Does not capture preceding url-encoded characters', () => {
     const results1 = test1.matchAll(DOMAIN_REGEX);
     const actualResults = addUniqueValuesToArray([], results1);
     expect(actualResults.length).toBe(2);
-    console.log(actualResults);
+    // console.log(actualResults);
     expect(actualResults[0]).toBe('virustotal.com');
     expect(actualResults[1]).toBe('google.com');
 })
