@@ -433,7 +433,7 @@ export class CyberPlugin extends Plugin {
 
     protected debug(...args: any[]): void {
         if (this.isDebugging) {
-            console.log(`[${this.manifest.name}]`, ...args);
+            console.debug(`[${this.manifest.name}]`, ...args);
         }
     }
 }

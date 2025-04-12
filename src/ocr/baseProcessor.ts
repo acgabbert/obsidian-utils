@@ -107,7 +107,7 @@ export abstract class BaseOcrProcessor implements IOcrProcessor {
 
     protected debug(...args: any[]): void {
         if (this.isDebugging) {
-            console.log(`[${this.id}]`, ...args);
+            console.debug(`[${this.id}]`, ...args);
         }
     }
 

@@ -31,13 +31,16 @@ interface Tool {
 }
 
 interface FunctionConfig {
-    name: string,
-    description?: string,
+    name: string;
+    description?: string;
     parameters: {
-        type: "object",
-        properties: Record<string, unknown>
-    },
-    required?: Array<string>;
+        type: "object";
+        properties: Record<string, unknown>;
+        required: string[];
+        additionalProperties?: boolean;
+    };
+    strict?: boolean;
+    parallel_tool_calls?: boolean;
 }
 
 interface ChatCompletionRequest {
@@ -77,7 +80,7 @@ interface OpenAiClientConfig {
  * An OpenAI-compatible API client leveraging Obsidian's built-in request function.
  */
 class OpenAICompatibleClient {
-    protected baseURL: string;
+    protected baseURL: string = 'https://api.openai.com/v1';
     protected defaultEndpoint: string = "/chat/completions";
     protected name: string = "OpenAI-Compatible Client";
     protected isDebugging: boolean = false;
@@ -90,7 +93,10 @@ class OpenAICompatibleClient {
     protected toolCallLimit: number;
 
     constructor(config: OpenAiClientConfig) {
-        this.baseURL = config.baseUrl ?? 'https://api.openai.com/v1';
+        if (config.baseUrl) {
+            // Remove trailing slash
+            this.baseURL = config.baseUrl.replace(/\/$/, '');
+        }
         this.apiKey = config.apiKey ?? '';
         this.model = config.model ?? '';
         this.isDebugging = config.isDebugging || false;
@@ -98,6 +104,7 @@ class OpenAICompatibleClient {
         this.tools = config.tools;
         this.headers = {
             'Authorization': this.apiKey ? `Bearer ${this.apiKey}` : '',
+            'Accept': 'application/json',
             'Content-Type': 'application/json',
             ...config.headers
         };
@@ -114,18 +121,24 @@ class OpenAICompatibleClient {
 
     /**
      * Send a user role message to the assistant.
-     * @param content the contents of the message
+     * @param content the contents of the user message
      * @returns a ChatCompletionResponse object
      */
-    async chat(content: string, model?: string): Promise<ChatCompletionResponse> {
-        const userMessage: Message = {
-            role: 'user',
-            content: content
+    async chat(content: string | ChatCompletionRequest): Promise<ChatCompletionResponse> {
+        let response: ChatCompletionResponse;
+        if (typeof content === 'string') {
+            const userMessage: Message = {
+                role: 'user',
+                content: content
+            }
+
+            this.messageHistory.push(userMessage);
+
+            response = await this.conversationRequest();
+        } else {
+            response = await this.conversationRequest(content);
         }
 
-        this.messageHistory.push(userMessage);
-        
-        let response = await this.conversationRequest(model);
         let toolCallCount = 0;
 
         while (
@@ -145,10 +158,30 @@ class OpenAICompatibleClient {
                 });
             }
 
-            response = await this.conversationRequest(model);
+            response = await this.conversationRequest();
         }
 
         return response;
+    }
+
+    /**
+     * Send a one-off message to the assistant with no history
+     * @param content the contents of the user message
+     * @returns a ChatCompletionResponse object
+     */
+    async chatOnce(content: string): Promise<ChatCompletionResponse> {
+        const messages: Message[] = [];
+        if (this.systemMessage) messages.push(this.systemMessage);
+        const userMessage: Message = {
+            role: 'user',
+            content: content
+        };
+
+        return this.conversationRequest({
+            messages,
+            model: this.model,
+            tools: this.tools?.map(tool => tool.toolConfig)
+        });
     }
 
 
@@ -156,12 +189,16 @@ class OpenAICompatibleClient {
      * Make a conversation request with the current message history.
      * @returns a ChatCompletionResponse object
      */
-    protected async conversationRequest(model?: string): Promise<ChatCompletionResponse> {
-        model = model ?? this.model;
-        const requestBody: ChatCompletionRequest = {
-            messages: this.messageHistory,
-            model: model,
-            tools: this.tools?.map(tool => tool.toolConfig)
+    protected async conversationRequest(completionRequest?: ChatCompletionRequest): Promise<ChatCompletionResponse> {
+        let requestBody: ChatCompletionRequest;
+        if (completionRequest) {
+            requestBody = completionRequest;
+        } else {
+            requestBody = {
+                messages: this.messageHistory,
+                model: this.model,
+                tools: this.tools?.map(tool => tool.toolConfig)
+            }
         }
 
         try {

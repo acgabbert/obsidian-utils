@@ -157,7 +157,7 @@ export class OcrProvider implements IOcrProvider {
 
     protected debug(...args: any[]): void {
         if (this.isDebugging) {
-            console.log(`[OcrProvider]`, ...args)
+            console.debug(`[OcrProvider]`, ...args)
         }
     }
 
